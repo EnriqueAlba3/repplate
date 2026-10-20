@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Rep Plate</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Rep Plate — personal lifting, food, water and bodyweight tracker.">
+
+  <!-- PWA / iOS home-screen -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Rep Plate">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#58cc02" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#131f24" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
+
+  <style>
+    /* ============================================================
+       THEME TOKENS
+       Light is the default; dark overrides follow the system setting.
+       ============================================================ */
+    :root {
+      --green:        #58cc02;  --green-dark:  #46a302;
+      --blue:         #1cb0f6;  --blue-dark:   #1899d6;
+      --orange:       #ff9600;  --orange-dark: #e68600;
+      --red:          #ff4b4b;  --red-dark:    #ea2b2b;
+      --purple:       #ce82ff;  --purple-dark: #a568cc;
+      --yellow:       #ffc800;  --yellow-dark: #e6b400;
+
+      --bg:           #ffffff;
+      --bg-2:         #f7f7f7;   /* cards */
+      --line:         #e5e5e5;
+      --text:         #3c3c3c;
+      --text-2:       #777777;
+      --text-on-color:#ffffff;
+      --tab-bg:       #ffffff;
+      --tab-active:   var(--blue);
+      --tab-active-bg:#ddf4ff;
+      --neutral:      #e5e5e5;  --neutral-dark: #cfcfcf; --neutral-text: #4b4b4b;
+
+      --radius:       16px;
+      --radius-lg:    22px;
+      --tab-h:        64px;
+      --safe-top:     env(safe-area-inset-top, 0px);
+      --safe-bottom:  env(safe-area-inset-bottom, 0px);
+      --font: ui-rounded, -apple-system, "SF Pro Rounded", system-ui, "Segoe UI", Roboto, sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:            #131f24;
+        --bg-2:          #1b2b33;
+        --line:          #37464f;
+        --text:          #f1f7fb;
+        --text-2:        #a6b5bd;
+        --tab-bg:        #131f24;
+        --tab-active:    #49c0f8;
+        --tab-active-bg: #1f3a4a;
+        --neutral:       #37464f;  --neutral-dark: #27343b; --neutral-text: #f1f7fb;
+      }
+    }
+
+    /* ============================================================
+       BASE
+       ============================================================ */
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 17px;
+      line-height: 1.35;
+      -webkit-font-smoothing: antialiased;
+      -webkit-text-size-adjust: 100%;
+      overscroll-behavior-y: none;      /* no rubber-band pull on the whole page */
+      -webkit-user-select: none; user-select: none;
+    }
+    input, textarea { -webkit-user-select: text; user-select: text; }
+    h1, h2, h3 { margin: 0; font-weight: 800; letter-spacing: -0.01em; }
+    h1 { font-size: 28px; }
+    h2 { font-size: 20px; }
+    p  { margin: 0 0 8px; }
+    .muted { color: var(--text-2); }
+    .small { font-size: 14px; }
+
+    /* ============================================================
+       LAYOUT: top padding for the notch, scrollable screens,
+       bottom tab bar that respects the home indicator.
+       ============================================================ */
+    #app {
+      min-height: 100%;
+      padding: calc(var(--safe-top) + 12px) 16px calc(var(--tab-h) + var(--safe-bottom) + 24px);
+      max-width: 560px;
+      margin: 0 auto;
+    }
+    .screen { display: none; animation: fadeIn .18s ease-out; }
+    .screen.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+    .card {
+      background: var(--bg-2);
+      border: 2px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      margin: 12px 0;
+    }
+    .row { display: flex; align-items: center; gap: 12px; }
+    .row.between { justify-content: space-between; }
+    .stack > * + * { margin-top: 12px; }
+
+    /* ============================================================
+       BUTTONS — the Duolingo-style "3D" button.
+       The solid bottom edge is a box-shadow; on press we drop the
+       button down by the same amount and remove the shadow so it
+       looks physically pushed in. Pure CSS, works with no vibration.
+       ============================================================ */
+    .btn {
+      --c: var(--green); --c-dark: var(--green-dark); --fg: var(--text-on-color);
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%;
+      min-height: 56px;
+      padding: 12px 18px;
+      border: 0;
+      border-radius: var(--radius);
+      background: var(--c);
+      color: var(--fg);
+      font: inherit;
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      box-shadow: 0 5px 0 0 var(--c-dark);
+      transform: translateY(0);
+      transition: transform .06s ease, box-shadow .06s ease, filter .12s ease;
+      cursor: pointer;
+      touch-action: manipulation;         /* no 300ms delay, no double-tap zoom */
+    }
+    .btn:active, .btn.pressed {
+      transform: translateY(5px);
+      box-shadow: 0 0 0 0 var(--c-dark);
+    }
+    .btn:disabled { filter: saturate(.3) opacity(.6); pointer-events: none; }
+
+    .btn.blue    { --c: var(--blue);    --c-dark: var(--blue-dark); }
+    .btn.orange  { --c: var(--orange);  --c-dark: var(--orange-dark); }
+    .btn.red     { --c: var(--red);     --c-dark: var(--red-dark); }
+    .btn.purple  { --c: var(--purple);  --c-dark: var(--purple-dark); }
+    .btn.yellow  { --c: var(--yellow);  --c-dark: var(--yellow-dark); --fg: #4b3a00; }
+    .btn.neutral { --c: var(--neutral); --c-dark: var(--neutral-dark); --fg: var(--neutral-text); }
+    .btn.ghost   { --c: transparent; --c-dark: transparent; --fg: var(--blue);
+                   box-shadow: inset 0 0 0 2px var(--line); }
+    .btn.ghost:active { box-shadow: inset 0 0 0 2px var(--line); transform: scale(.97); }
+    .btn.sm { min-height: 44px; font-size: 15px; padding: 8px 14px; border-radius: 12px; box-shadow: 0 4px 0 0 var(--c-dark); }
+    .btn.sm:active { transform: translateY(4px); }
+    .btn.auto { width: auto; }
+    .btn.big { min-height: 72px; font-size: 20px; border-radius: 20px; }
+
+    /* A "pop" we can trigger from JS for satisfying feedback (e.g. after a log). */
+    @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
+    .pop { animation: pop .25s ease-out; }
+
+    /* ============================================================
+       INPUTS — 16px+ so iOS doesn't zoom on focus.
+       ============================================================ */
+    .field { display: block; margin: 12px 0; }
+    .field label { display: block; font-weight: 800; font-size: 14px; color: var(--text-2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    .input {
+      width: 100%;
+      min-height: 52px;
+      padding: 10px 14px;
+      font: inherit;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      background: var(--bg);
+      border: 2px solid var(--line);
+      border-radius: 14px;
+      outline: none;
+      appearance: none; -webkit-appearance: none;
+    }
+    .input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--tab-active-bg); }
+
+    /* ============================================================
+       BOTTOM TAB BAR
+       ============================================================ */
+    #tabbar {
+      position: fixed; left: 0; right: 0; bottom: 0;
+      height: calc(var(--tab-h) + var(--safe-bottom));
+      padding-bottom: var(--safe-bottom);
+      background: var(--tab-bg);
+      border-top: 2px solid var(--line);
+      display: flex;
+      z-index: 50;
+    }
+    .tab {
+      flex: 1;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+      border: 0; background: none; color: var(--text-2);
+      font: inherit; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em;
+      cursor: pointer; touch-action: manipulation;
+      transition: transform .08s ease;
+    }
+    .tab:active { transform: scale(.9); }
+    .tab .ico {
+      width: 40px; height: 30px; border-radius: 12px;
+      display: grid; place-items: center;
+      font-size: 22px; line-height: 1;
+      transition: background .12s ease;
+    }
+    .tab.active { color: var(--tab-active); }
+    .tab.active .ico { background: var(--tab-active-bg); }
+
+    /* ============================================================
+       TOAST (bottom message) — used for errors and "update available".
+       ============================================================ */
+    #toast {
+      position: fixed; left: 16px; right: 16px;
+      bottom: calc(var(--tab-h) + var(--safe-bottom) + 12px);
+      background: var(--text); color: var(--bg);
+      padding: 12px 16px; border-radius: 14px;
+      font-weight: 700; font-size: 15px;
+      display: none; align-items: center; gap: 12px;
+      z-index: 60;
+      box-shadow: 0 8px 24px rgba(0,0,0,.25);
+      animation: fadeIn .18s ease-out;
+    }
+    #toast.show { display: flex; }
+    #toast .grow { flex: 1; }
+    #toast button { border: 0; background: var(--blue); color: #fff; font: inherit; font-weight: 800; padding: 8px 12px; border-radius: 10px; }
+
+    /* Status pills on the Home card (Phase 0 diagnostics). */
+    .pill { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 800; background: var(--neutral); color: var(--neutral-text); }
+    .pill.ok   { background: #d7ffb8; color: #2b6a00; }
+    .pill.bad  { background: #ffdada; color: #a30000; }
+    @media (prefers-color-scheme: dark) {
+      .pill.ok  { background: #234a0c; color: #b6f78a; }
+      .pill.bad { background: #5a1a1a; color: #ffb3b3; }
+    }
+    .status-list { display: grid; gap: 8px; }
+    .status-list .row { justify-content: space-between; }
+  </style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ================= HOME ================= -->
+  <section class="screen active" data-screen="home">
+    <h1 id="greeting">Hey! 👋</h1>
+    <p class="muted" id="today-line">Phase 0 — the shell is up.</p>
+
+    <div class="card">
+      <h2>App status</h2>
+      <p class="muted small">Use these to tick off the Phase 0 checklist.</p>
+      <div class="status-list" id="status-list">
+        <div class="row"><span>Running from home screen</span><span class="pill" id="st-standalone">…</span></div>
+        <div class="row"><span>Offline cache (service worker)</span><span class="pill" id="st-sw">…</span></div>
+        <div class="row"><span>Database open</span><span class="pill" id="st-db">…</span></div>
+        <div class="row"><span>Storage protected from eviction</span><span class="pill" id="st-persist">…</span></div>
+        <div class="row"><span>Online right now</span><span class="pill" id="st-online">…</span></div>
+      </div>
+    </div>
+
+    <div class="card stack">
+      <h2>Button feel test</h2>
+      <p class="muted small">Press these. They should sink and spring back.</p>
+      <button class="btn big" onclick="pop(this)">Workout</button>
+      <button class="btn blue" onclick="pop(this)">Food</button>
+      <button class="btn purple" onclick="pop(this)">Progress</button>
+      <div class="row">
+        <button class="btn orange sm" onclick="pop(this)">+8 oz</button>
+        <button class="btn orange sm" onclick="pop(this)">+16 oz</button>
+        <button class="btn neutral sm" onclick="pop(this)">−8</button>
+      </div>
+      <button class="btn ghost">Ghost button</button>
+    </div>
+
+    <div class="card">
+      <h2>Keyboard test</h2>
+      <p class="muted small">Tapping these should NOT zoom the page. Weight gets a decimal keypad; calories a number pad.</p>
+      <div class="field"><label>Weight (lb)</label><input class="input" inputmode="decimal" placeholder="155.5"></div>
+      <div class="field"><label>Calories</label><input class="input" inputmode="numeric" placeholder="650"></div>
+    </div>
+  </section>
+
+  <!-- ================= WORKOUT ================= -->
+  <section class="screen" data-screen="workout">
+    <h1>Workout 🏋️</h1>
+    <div class="card"><p class="muted">Coming in Phase 1: today's exercises, weight entry, "beat last time", and the rest timer.</p></div>
+  </section>
+
+  <!-- ================= FOOD ================= -->
+  <section class="screen" data-screen="food">
+    <h1>Food 🍗</h1>
+    <div class="card"><p class="muted">Coming in Phase 2: food log with calories + protein, water quick-add, supplements.</p></div>
+  </section>
+
+  <!-- ================= PROGRESS ================= -->
+  <section class="screen" data-screen="progress">
+    <h1>Progress 📈</h1>
+    <div class="card"><p class="muted">Coming in Phase 3: weekly calories vs goal, trends, lift trends, bodyweight line graph.</p></div>
+  </section>
+
+  <!-- ================= MORE ================= -->
+  <section class="screen" data-screen="more">
+    <h1>More</h1>
+    <div class="card stack">
+      <h2>Storage test</h2>
+      <p class="muted small">Writes a record to IndexedDB, reads it back, and deletes it. Proves saving works from the home-screen app.</p>
+      <button class="btn blue" id="btn-dbtest">Run storage test</button>
+      <p class="small" id="dbtest-out"></p>
+    </div>
+    <div class="card stack">
+      <h2>Updates</h2>
+      <p class="muted small">Version <strong id="app-version"></strong>. If a newer version was uploaded, this forces it to load.</p>
+      <button class="btn neutral" id="btn-update">Check for update</button>
+    </div>
+    <div class="card">
+      <p class="muted small">Milestones · Achievements · Setup · Backup will live here.</p>
+    </div>
+  </section>
+
+</div>
+
+<!-- ================= TAB BAR ================= -->
+<nav id="tabbar">
+  <button class="tab active" data-tab="home"><span class="ico">🏠</span>Home</button>
+  <button class="tab" data-tab="workout"><span class="ico">🏋️</span>Workout</button>
+  <button class="tab" data-tab="food"><span class="ico">🍗</span>Food</button>
+  <button class="tab" data-tab="progress"><span class="ico">📈</span>Progress</button>
+  <button class="tab" data-tab="more"><span class="ico">⋯</span>More</button>
+</nav>
+
+<div id="toast"><span class="grow" id="toast-msg"></span><button id="toast-btn" hidden></button></div>
+
+<script>
+/* ==============================================================
+   Rep Plate v2 — Phase 0
+   Sections: constants · helpers · IndexedDB wrapper · tabs ·
+             service worker + updates · boot
+   ============================================================== */
+'use strict';
+
+const APP_VERSION = '0.1.0';   // keep in sync with CACHE_VERSION in sw.js
+
+/* ---------- helpers ---------- */
+const $  = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+// Local date as YYYY-MM-DD (phone's own timezone, i.e. Central for you).
+// toISOString() would give UTC and roll the date over at 7pm — avoid it.
+function todayStr(d = new Date()) {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+// Visual feedback: quick scale pop on an element (no vibration on iOS).
+function pop(el) {
+  el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+}
+
+let toastTimer = null;
+function toast(msg, { action, onAction, sticky } = {}) {
+  const t = $('#toast'), b = $('#toast-btn');
+  $('#toast-msg').textContent = msg;
+  b.hidden = !action;
+  if (action) { b.textContent = action; b.onclick = () => { hideToast(); onAction && onAction(); }; }
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  if (!sticky) toastTimer = setTimeout(hideToast, 3500);
+}
+function hideToast() { $('#toast').classList.remove('show'); }
+
+/* ---------- IndexedDB wrapper ----------
+   Every method returns a Promise and is wrapped so a storage failure
+   turns into a toast instead of a crash. Usage:
+     await DB.put('food', {id: uid(), date: todayStr(), name:'Eggs', calories: 300});
+     const rows = await DB.getAll('food');
+     const todays = await DB.byIndex('food', 'date', todayStr());
+     await DB.delete('food', id);
+     await DB.setting('calorieGoal', 2200);  const g = await DB.setting('calorieGoal');
+   ------------------------------------------------------------ */
+const DB = (() => {
+  const NAME = 'repplate';
+  const VERSION = 1;
+  let db = null;
+
+  // Stores from the master prompt. keyPath 'id' everywhere except settings ('key').
+  // Each date-based store gets a 'date' index so "today's entries" is one query.
+  const SCHEMA = {
+    settings:     { keyPath: 'key' },
+    exercises:    { keyPath: 'id' },
+    workouts:     { keyPath: 'id', indexes: ['date', 'exerciseId'] },
+    food:         { keyPath: 'id', indexes: ['date'] },
+    water:        { keyPath: 'id', indexes: ['date'] },
+    supplements:  { keyPath: 'id', indexes: ['date'] },
+    bodyweight:   { keyPath: 'id', indexes: ['date'] },
+    photos:       { keyPath: 'id', indexes: ['date'] },
+    milestones:   { keyPath: 'id', indexes: ['date'] },
+    achievements: { keyPath: 'id' },
+  };
+
+  function open() {
+    if (db) return Promise.resolve(db);
+    return new Promise((resolve, reject) => {
+      if (!('indexedDB' in window)) return reject(new Error('IndexedDB not supported'));
+      const req = indexedDB.open(NAME, VERSION);
+      req.onupgradeneeded = (e) => {
+        const d = e.target.result;
+        for (const [name, def] of Object.entries(SCHEMA)) {
+          if (!d.objectStoreNames.contains(name)) {
+            const store = d.createObjectStore(name, { keyPath: def.keyPath });
+            (def.indexes || []).forEach((idx) => store.createIndex(idx, idx, { unique: false }));
+          }
+        }
+      };
+      req.onsuccess = () => {
+        db = req.result;
+        db.onversionchange = () => { db.close(); db = null; };
+        resolve(db);
+      };
+      req.onerror = () => reject(req.error || new Error('Could not open database'));
+      req.onblocked = () => reject(new Error('Database blocked — close other copies of the app'));
+    });
+  }
+
+  // Run one operation inside a transaction and resolve with the request result.
+  async function run(store, mode, fn) {
+    try {
+      const d = await open();
+      return await new Promise((resolve, reject) => {
+        const tx = d.transaction(store, mode);
+        const req = fn(tx.objectStore(store));
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+        tx.onabort = () => reject(tx.error || new Error('Transaction aborted'));
+      });
+    } catch (err) {
+      console.error('[DB]', store, err);
+      toast(`Couldn't save/load (${store}). ${err && err.message ? err.message : ''}`.trim());
+      throw err;
+    }
+  }
+
+  return {
+    open,
+    get:     (store, key)         => run(store, 'readonly',  (s) => s.get(key)),
+    getAll:  (store)              => run(store, 'readonly',  (s) => s.getAll()),
+    byIndex: (store, index, val)  => run(store, 'readonly',  (s) => s.index(index).getAll(val)),
+    put:     (store, obj)         => run(store, 'readwrite', (s) => s.put(obj)),
+    delete:  (store, key)         => run(store, 'readwrite', (s) => s.delete(key)),
+    clear:   (store)              => run(store, 'readwrite', (s) => s.clear()),
+    // settings helper: setting('key') reads, setting('key', value) writes
+    async setting(key, value) {
+      if (value === undefined) { const r = await this.get('settings', key); return r ? r.value : undefined; }
+      await this.put('settings', { key, value });
+      return value;
+    },
+  };
+})();
+
+/* ---------- tabs ---------- */
+function showTab(name) {
+  $$('.screen').forEach((s) => s.classList.toggle('active', s.dataset.screen === name));
+  $$('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+  window.scrollTo(0, 0);
+  try { sessionStorage.setItem('tab', name); } catch (_) {}
+}
+$$('.tab').forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab)));
+
+/* ---------- service worker + updates ----------
+   On iOS the home-screen app can hang on to an old cached index.html for a while.
+   We register the SW, and when a NEW worker finishes installing we show a toast
+   with a Reload button so you can pull the new version on demand.
+   ------------------------------------------------------------ */
+let swReg = null;
+async function registerSW() {
+  if (!('serviceWorker' in navigator)) { setPill('st-sw', 'n/a', false); return; }
+  try {
+    swReg = await navigator.serviceWorker.register('sw.js');
+    setPill('st-sw', swReg.active ? 'cached' : 'installing', !!swReg.active);
+    swReg.addEventListener('updatefound', () => {
+      const nw = swReg.installing;
+      nw && nw.addEventListener('statechange', () => {
+        if (nw.state === 'installed') {
+          if (navigator.serviceWorker.controller) {
+            toast('New version ready', { action: 'Reload', sticky: true, onAction: () => location.reload() });
+          } else {
+            setPill('st-sw', 'cached', true);
+            toast('Ready for offline use ✈️');
+          }
+        }
+      });
+    });
+    navigator.serviceWorker.addEventListener('controllerchange', () => setPill('st-sw', 'cached', true));
+  } catch (err) {
+    console.error('SW register failed', err);
+    setPill('st-sw', 'failed', false);
+  }
+}
+$('#btn-update').addEventListener('click', async (e) => {
+  pop(e.currentTarget);
+  try {
+    if (swReg) { await swReg.update(); toast('Checked. If a new version exists you\'ll get a Reload button.'); }
+    else toast('No offline cache registered yet.');
+  } catch (_) { toast('Update check failed (offline?)'); }
+});
+
+/* ---------- status pills (Phase 0 diagnostics) ---------- */
+function setPill(id, text, ok) {
+  const el = $('#' + id);
+  el.textContent = text;
+  el.className = 'pill ' + (ok === true ? 'ok' : ok === false ? 'bad' : '');
+}
+function isStandalone() {
+  return window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+}
+function updateOnline() { setPill('st-online', navigator.onLine ? 'yes' : 'no (offline)', navigator.onLine ? true : null); }
+window.addEventListener('online', updateOnline);
+window.addEventListener('offline', updateOnline);
+
+/* ---------- storage test (More tab) ---------- */
+$('#btn-dbtest').addEventListener('click', async (e) => {
+  pop(e.currentTarget);
+  const out = $('#dbtest-out');
+  out.textContent = 'Running…';
+  try {
+    const rec = { id: 'selftest', date: todayStr(), name: 'Self-test', calories: 123 };
+    await DB.put('food', rec);
+    const back = await DB.get('food', 'selftest');
+    const todays = await DB.byIndex('food', 'date', todayStr());
+    await DB.delete('food', 'selftest');
+    const gone = await DB.get('food', 'selftest');
+    const okRead = back && back.calories === 123;
+    const okIdx  = todays.some((r) => r.id === 'selftest');
+    const okDel  = gone === undefined;
+    out.textContent = (okRead && okIdx && okDel)
+      ? `✅ Write, read, index query and delete all worked (${todayStr()}).`
+      : `⚠️ read:${okRead} index:${okIdx} delete:${okDel}`;
+  } catch (err) {
+    out.textContent = '❌ ' + (err && err.message ? err.message : err);
+  }
+});
+
+/* ---------- boot ---------- */
+(async function boot() {
+  $('#app-version').textContent = APP_VERSION;
+
+  // Greeting by time of day.
+  const h = new Date().getHours();
+  $('#greeting').textContent = (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + '! 👋';
+  $('#today-line').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) + ' · Phase 0 shell';
+
+  // Restore the last tab (sessionStorage survives tab switches, not relaunches).
+  try { const t = sessionStorage.getItem('tab'); if (t) showTab(t); } catch (_) {}
+
+  setPill('st-standalone', isStandalone() ? 'yes' : 'no (Safari tab)', isStandalone() ? true : false);
+  updateOnline();
+
+  // Open the DB early so the first real screen doesn't wait on it.
+  try { await DB.open(); setPill('st-db', 'ok', true); }
+  catch (err) { setPill('st-db', 'failed', false); }
+
+  // Ask the browser not to evict our data under storage pressure.
+  // iOS Safari grants this automatically for home-screen apps; in a tab it may say no.
+  try {
+    if (navigator.storage && navigator.storage.persist) {
+      const already = await navigator.storage.persisted();
+      const granted = already || await navigator.storage.persist();
+      setPill('st-persist', granted ? 'yes' : 'no', granted ? true : null);
+    } else setPill('st-persist', 'n/a', null);
+  } catch (_) { setPill('st-persist', 'unknown', null); }
+
+  registerSW();
+})();
+</script>
+</body>
+</html>
