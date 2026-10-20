@@ -20,7 +20,6 @@
   <style>
     /* ============================================================
        THEME TOKENS
-       Light is the default; dark overrides follow the system setting.
        ============================================================ */
     :root {
       --green:        #58cc02;  --green-dark:  #46a302;
@@ -31,7 +30,8 @@
       --yellow:       #ffc800;  --yellow-dark: #e6b400;
 
       --bg:           #ffffff;
-      --bg-2:         #f7f7f7;   /* cards */
+      --bg-2:         #f7f7f7;
+      --bg-3:         #eeeeee;
       --line:         #e5e5e5;
       --text:         #3c3c3c;
       --text-2:       #777777;
@@ -40,6 +40,8 @@
       --tab-active:   var(--blue);
       --tab-active-bg:#ddf4ff;
       --neutral:      #e5e5e5;  --neutral-dark: #cfcfcf; --neutral-text: #4b4b4b;
+      --good-bg: #d7ffb8; --good-fg: #2b6a00;
+      --bad-bg:  #ffdada; --bad-fg:  #a30000;
 
       --radius:       16px;
       --radius-lg:    22px;
@@ -48,11 +50,11 @@
       --safe-bottom:  env(safe-area-inset-bottom, 0px);
       --font: ui-rounded, -apple-system, "SF Pro Rounded", system-ui, "Segoe UI", Roboto, sans-serif;
     }
-
     @media (prefers-color-scheme: dark) {
       :root {
         --bg:            #131f24;
         --bg-2:          #1b2b33;
+        --bg-3:          #243741;
         --line:          #37464f;
         --text:          #f1f7fb;
         --text-2:        #a6b5bd;
@@ -60,6 +62,8 @@
         --tab-active:    #49c0f8;
         --tab-active-bg: #1f3a4a;
         --neutral:       #37464f;  --neutral-dark: #27343b; --neutral-text: #f1f7fb;
+        --good-bg: #234a0c; --good-fg: #b6f78a;
+        --bad-bg:  #5a1a1a; --bad-fg:  #ffb3b3;
       }
     }
 
@@ -69,265 +73,258 @@
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body { height: 100%; }
     body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font);
-      font-size: 17px;
-      line-height: 1.35;
-      -webkit-font-smoothing: antialiased;
-      -webkit-text-size-adjust: 100%;
-      overscroll-behavior-y: none;      /* no rubber-band pull on the whole page */
+      margin: 0; background: var(--bg); color: var(--text);
+      font-family: var(--font); font-size: 17px; line-height: 1.35;
+      -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%;
+      overscroll-behavior-y: none;
       -webkit-user-select: none; user-select: none;
     }
-    input, textarea { -webkit-user-select: text; user-select: text; }
+    input, textarea, select { -webkit-user-select: text; user-select: text; }
     h1, h2, h3 { margin: 0; font-weight: 800; letter-spacing: -0.01em; }
     h1 { font-size: 28px; }
     h2 { font-size: 20px; }
+    h3 { font-size: 17px; }
     p  { margin: 0 0 8px; }
     .muted { color: var(--text-2); }
     .small { font-size: 14px; }
+    .tiny  { font-size: 12px; }
+    .center { text-align: center; }
+    .hidden { display: none !important; }
+    .mt { margin-top: 12px; }
 
-    /* ============================================================
-       LAYOUT: top padding for the notch, scrollable screens,
-       bottom tab bar that respects the home indicator.
-       ============================================================ */
     #app {
       min-height: 100%;
       padding: calc(var(--safe-top) + 12px) 16px calc(var(--tab-h) + var(--safe-bottom) + 24px);
-      max-width: 560px;
-      margin: 0 auto;
+      max-width: 560px; margin: 0 auto;
     }
     .screen { display: none; animation: fadeIn .18s ease-out; }
     .screen.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
     .card {
-      background: var(--bg-2);
-      border: 2px solid var(--line);
-      border-radius: var(--radius-lg);
-      padding: 16px;
-      margin: 12px 0;
+      background: var(--bg-2); border: 2px solid var(--line);
+      border-radius: var(--radius-lg); padding: 16px; margin: 12px 0;
     }
+    .card.accent { border-color: var(--green); }
     .row { display: flex; align-items: center; gap: 12px; }
     .row.between { justify-content: space-between; }
+    .row.wrap { flex-wrap: wrap; }
+    .grow { flex: 1; min-width: 0; }
     .stack > * + * { margin-top: 12px; }
+    .topbar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .topbar h1 { flex: 1; }
+    .ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* ============================================================
-       BUTTONS — the Duolingo-style "3D" button.
-       The solid bottom edge is a box-shadow; on press we drop the
-       button down by the same amount and remove the shadow so it
-       looks physically pushed in. Pure CSS, works with no vibration.
+       BUTTONS — Duolingo-style 3D press
        ============================================================ */
     .btn {
       --c: var(--green); --c-dark: var(--green-dark); --fg: var(--text-on-color);
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      width: 100%;
-      min-height: 56px;
-      padding: 12px 18px;
-      border: 0;
-      border-radius: var(--radius);
-      background: var(--c);
-      color: var(--fg);
-      font: inherit;
-      font-size: 17px;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      box-shadow: 0 5px 0 0 var(--c-dark);
-      transform: translateY(0);
+      width: 100%; min-height: 56px; padding: 12px 18px;
+      border: 0; border-radius: var(--radius);
+      background: var(--c); color: var(--fg);
+      font: inherit; font-size: 17px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+      box-shadow: 0 5px 0 0 var(--c-dark); transform: translateY(0);
       transition: transform .06s ease, box-shadow .06s ease, filter .12s ease;
-      cursor: pointer;
-      touch-action: manipulation;         /* no 300ms delay, no double-tap zoom */
+      cursor: pointer; touch-action: manipulation;
     }
-    .btn:active, .btn.pressed {
-      transform: translateY(5px);
-      box-shadow: 0 0 0 0 var(--c-dark);
-    }
+    .btn:active, .btn.pressed { transform: translateY(5px); box-shadow: 0 0 0 0 var(--c-dark); }
     .btn:disabled { filter: saturate(.3) opacity(.6); pointer-events: none; }
-
     .btn.blue    { --c: var(--blue);    --c-dark: var(--blue-dark); }
     .btn.orange  { --c: var(--orange);  --c-dark: var(--orange-dark); }
     .btn.red     { --c: var(--red);     --c-dark: var(--red-dark); }
     .btn.purple  { --c: var(--purple);  --c-dark: var(--purple-dark); }
     .btn.yellow  { --c: var(--yellow);  --c-dark: var(--yellow-dark); --fg: #4b3a00; }
     .btn.neutral { --c: var(--neutral); --c-dark: var(--neutral-dark); --fg: var(--neutral-text); }
-    .btn.ghost   { --c: transparent; --c-dark: transparent; --fg: var(--blue);
-                   box-shadow: inset 0 0 0 2px var(--line); }
+    .btn.ghost   { --c: transparent; --c-dark: transparent; --fg: var(--blue); box-shadow: inset 0 0 0 2px var(--line); }
     .btn.ghost:active { box-shadow: inset 0 0 0 2px var(--line); transform: scale(.97); }
     .btn.sm { min-height: 44px; font-size: 15px; padding: 8px 14px; border-radius: 12px; box-shadow: 0 4px 0 0 var(--c-dark); }
     .btn.sm:active { transform: translateY(4px); }
+    .btn.xs { min-height: 36px; font-size: 13px; padding: 6px 10px; border-radius: 10px; box-shadow: 0 3px 0 0 var(--c-dark); letter-spacing: .02em; }
+    .btn.xs:active { transform: translateY(3px); }
     .btn.auto { width: auto; }
     .btn.big { min-height: 72px; font-size: 20px; border-radius: 20px; }
+    .btn.square { width: 52px; min-width: 52px; padding: 0; font-size: 22px; }
+    .btn.icon { width: 44px; min-width: 44px; min-height: 44px; padding: 0; font-size: 20px; }
 
-    /* A "pop" we can trigger from JS for satisfying feedback (e.g. after a log). */
     @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
     .pop { animation: pop .25s ease-out; }
+    @keyframes shine { 0% { box-shadow: 0 0 0 0 rgba(255,200,0,.8); } 100% { box-shadow: 0 0 0 18px rgba(255,200,0,0); } }
+    .shine { animation: shine .7s ease-out; }
 
     /* ============================================================
-       INPUTS — 16px+ so iOS doesn't zoom on focus.
+       INPUTS
        ============================================================ */
     .field { display: block; margin: 12px 0; }
-    .field label { display: block; font-weight: 800; font-size: 14px; color: var(--text-2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    .field label, .lbl { display: block; font-weight: 800; font-size: 13px; color: var(--text-2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
     .input {
-      width: 100%;
-      min-height: 52px;
-      padding: 10px 14px;
-      font: inherit;
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text);
-      background: var(--bg);
-      border: 2px solid var(--line);
-      border-radius: 14px;
-      outline: none;
+      width: 100%; min-height: 52px; padding: 10px 14px;
+      font: inherit; font-size: 18px; font-weight: 700; color: var(--text);
+      background: var(--bg); border: 2px solid var(--line); border-radius: 14px; outline: none;
       appearance: none; -webkit-appearance: none;
     }
     .input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--tab-active-bg); }
+    .input.sm { min-height: 46px; font-size: 17px; padding: 8px 12px; }
+    select.input { padding-right: 36px; background-image: linear-gradient(45deg, transparent 50%, var(--text-2) 50%), linear-gradient(135deg, var(--text-2) 50%, transparent 50%); background-position: calc(100% - 20px) 50%, calc(100% - 14px) 50%; background-size: 6px 6px; background-repeat: no-repeat; }
+    .unit { position: relative; }
+    .unit .input { padding-right: 52px; }
+    .unit span { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-weight: 800; color: var(--text-2); font-size: 14px; }
+
+    .toggle { position: relative; display: inline-block; width: 54px; height: 32px; flex: none; }
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle i { position: absolute; inset: 0; background: var(--neutral); border-radius: 999px; transition: .15s; }
+    .toggle i:before { content: ''; position: absolute; width: 26px; height: 26px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .15s; box-shadow: 0 2px 4px rgba(0,0,0,.25); }
+    .toggle input:checked + i { background: var(--green); }
+    .toggle input:checked + i:before { transform: translateX(22px); }
+
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .chip { border: 2px solid var(--line); background: var(--bg); color: var(--text); font: inherit; font-weight: 800; font-size: 14px; padding: 6px 12px; border-radius: 999px; }
+    .chip.on { border-color: var(--blue); background: var(--tab-active-bg); color: var(--tab-active); }
 
     /* ============================================================
-       BOTTOM TAB BAR
+       TAB BAR
        ============================================================ */
     #tabbar {
       position: fixed; left: 0; right: 0; bottom: 0;
-      height: calc(var(--tab-h) + var(--safe-bottom));
-      padding-bottom: var(--safe-bottom);
-      background: var(--tab-bg);
-      border-top: 2px solid var(--line);
-      display: flex;
-      z-index: 50;
+      height: calc(var(--tab-h) + var(--safe-bottom)); padding-bottom: var(--safe-bottom);
+      background: var(--tab-bg); border-top: 2px solid var(--line); display: flex; z-index: 50;
     }
     .tab {
-      flex: 1;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
       border: 0; background: none; color: var(--text-2);
       font: inherit; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em;
-      cursor: pointer; touch-action: manipulation;
-      transition: transform .08s ease;
+      cursor: pointer; touch-action: manipulation; transition: transform .08s ease;
     }
     .tab:active { transform: scale(.9); }
-    .tab .ico {
-      width: 40px; height: 30px; border-radius: 12px;
-      display: grid; place-items: center;
-      font-size: 22px; line-height: 1;
-      transition: background .12s ease;
-    }
+    .tab .ico { width: 40px; height: 30px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; line-height: 1; transition: background .12s ease; }
     .tab.active { color: var(--tab-active); }
     .tab.active .ico { background: var(--tab-active-bg); }
 
     /* ============================================================
-       TOAST (bottom message) — used for errors and "update available".
+       TOAST
        ============================================================ */
     #toast {
-      position: fixed; left: 16px; right: 16px;
-      bottom: calc(var(--tab-h) + var(--safe-bottom) + 12px);
-      background: var(--text); color: var(--bg);
-      padding: 12px 16px; border-radius: 14px;
-      font-weight: 700; font-size: 15px;
-      display: none; align-items: center; gap: 12px;
-      z-index: 60;
-      box-shadow: 0 8px 24px rgba(0,0,0,.25);
-      animation: fadeIn .18s ease-out;
+      position: fixed; left: 16px; right: 16px; bottom: calc(var(--tab-h) + var(--safe-bottom) + 12px);
+      background: var(--text); color: var(--bg); padding: 12px 16px; border-radius: 14px;
+      font-weight: 700; font-size: 15px; display: none; align-items: center; gap: 12px; z-index: 90;
+      box-shadow: 0 8px 24px rgba(0,0,0,.25); animation: fadeIn .18s ease-out;
     }
     #toast.show { display: flex; }
     #toast .grow { flex: 1; }
     #toast button { border: 0; background: var(--blue); color: #fff; font: inherit; font-weight: 800; padding: 8px 12px; border-radius: 10px; }
 
-    /* Status pills on the Home card (Phase 0 diagnostics). */
-    .pill { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 800; background: var(--neutral); color: var(--neutral-text); }
-    .pill.ok   { background: #d7ffb8; color: #2b6a00; }
-    .pill.bad  { background: #ffdada; color: #a30000; }
-    @media (prefers-color-scheme: dark) {
-      .pill.ok  { background: #234a0c; color: #b6f78a; }
-      .pill.bad { background: #5a1a1a; color: #ffb3b3; }
-    }
+    .pill { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 800; background: var(--neutral); color: var(--neutral-text); white-space: nowrap; }
+    .pill.ok  { background: var(--good-bg); color: var(--good-fg); }
+    .pill.bad { background: var(--bad-bg); color: var(--bad-fg); }
     .status-list { display: grid; gap: 8px; }
     .status-list .row { justify-content: space-between; }
+
+    /* ============================================================
+       RINGS (home dashboard)
+       ============================================================ */
+    .rings { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .ring { position: relative; width: 100%; aspect-ratio: 1; }
+    .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .ring circle { fill: none; stroke-width: 7; stroke-linecap: round; }
+    .ring .bg { stroke: var(--line); }
+    .ring .fg { transition: stroke-dashoffset .5s ease; }
+    .ring-txt { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+    .ring-txt b { font-size: 18px; }
+    .ring-txt small { font-size: 11px; color: var(--text-2); font-weight: 700; }
+    .ring-lbl { text-align: center; font-size: 12px; font-weight: 800; color: var(--text-2); text-transform: uppercase; letter-spacing: .05em; margin-top: 4px; }
+
+    /* ============================================================
+       WORKOUT
+       ============================================================ */
+    .ex-card.done { border-color: var(--green); }
+    .setrow { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+    .setno { width: 30px; height: 30px; border-radius: 50%; background: var(--bg-3); display: grid; place-items: center; font-weight: 800; font-size: 14px; flex: none; }
+    .setrow.done .setno { background: var(--green); color: #fff; }
+    .setw { flex: 1; font-weight: 800; font-size: 18px; }
+    .setw .arrow { font-size: 14px; margin-left: 6px; }
+    .arrow.up { color: var(--green); } .arrow.down { color: var(--red); } .arrow.same { color: var(--text-2); }
+    .star { color: var(--yellow); }
+    .last { background: var(--bg-3); border-radius: 12px; padding: 8px 12px; font-size: 14px; font-weight: 700; margin-top: 8px; }
+
+    /* ============================================================
+       REST TIMER (fixed, above the tab bar)
+       ============================================================ */
+    #rest {
+      position: fixed; left: 12px; right: 12px; bottom: calc(var(--tab-h) + var(--safe-bottom) + 10px);
+      z-index: 70; max-width: 536px; margin: 0 auto; animation: fadeIn .18s ease-out;
+    }
+    #rest .rbig, #rest .rpill { background: var(--bg); border: 2px solid var(--line); border-radius: 22px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+    #rest .rbig { padding: 16px; display: none; }
+    #rest.big .rbig { display: block; }
+    #rest .rpill { padding: 8px 10px 8px 16px; display: none; align-items: center; gap: 10px; }
+    #rest.pill .rpill { display: flex; }
+    #rest.over .rbig, #rest.over .rpill { border-color: var(--green); }
+    .rring { position: relative; width: 170px; height: 170px; margin: 0 auto; }
+    .rring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .rring circle { fill: none; stroke-width: 10; stroke-linecap: round; }
+    .rring .bg { stroke: var(--line); }
+    .rring .fg { stroke: var(--blue); transition: stroke-dashoffset .25s linear; }
+    .rring .t { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .rring .t b { font-size: 44px; letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+    .rring .t small { font-size: 13px; color: var(--text-2); font-weight: 800; margin-top: 6px; max-width: 120px; text-align: center; }
+    .rpill b { font-variant-numeric: tabular-nums; font-size: 18px; }
+    .rctrl { display: flex; gap: 8px; margin-top: 14px; }
+    #flash { position: fixed; inset: 0; background: var(--green); opacity: 0; pointer-events: none; z-index: 100; }
+    #flash.on { animation: flash .9s ease-out; }
+    @keyframes flash { 0% { opacity: .9; } 100% { opacity: 0; } }
+    #go { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; z-index: 101; opacity: 0; }
+    #go span { font-size: 96px; font-weight: 900; color: #fff; text-shadow: 0 6px 0 var(--green-dark), 0 10px 30px rgba(0,0,0,.3); }
+    #go.on { animation: go 1.1s ease-out; }
+    @keyframes go { 0% { opacity: 0; transform: scale(.4); } 20% { opacity: 1; transform: scale(1.1); } 70% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.2); } }
+
+    /* ============================================================
+       SHEET (bottom modal)
+       ============================================================ */
+    #backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; z-index: 80; }
+    #backdrop.show { display: block; }
+    #sheet {
+      position: absolute; left: 0; right: 0; bottom: 0; max-width: 560px; margin: 0 auto;
+      background: var(--bg); border-radius: 24px 24px 0 0;
+      padding: 20px 16px calc(var(--safe-bottom) + 20px); max-height: 88vh; overflow: auto;
+      animation: slideUp .2s ease-out;
+    }
+    @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .sheet-actions { display: grid; gap: 10px; margin-top: 16px; }
+
+    /* ============================================================
+       SETUP LISTS
+       ============================================================ */
+    .exrow { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-top: 2px solid var(--line); }
+    .exrow:first-of-type { border-top: 0; }
+    .exrow .name { font-weight: 800; }
+    .exrow .meta { font-size: 13px; color: var(--text-2); font-weight: 700; }
+    .menu-btn { display: flex; align-items: center; gap: 12px; width: 100%; background: var(--bg-2); border: 2px solid var(--line); border-radius: var(--radius); padding: 14px 16px; font: inherit; font-weight: 800; font-size: 17px; color: var(--text); text-align: left; margin: 8px 0; }
+    .menu-btn:active { transform: scale(.98); }
+    .menu-btn .ico { font-size: 24px; width: 32px; text-align: center; }
+    .menu-btn .sub { display: block; font-size: 13px; color: var(--text-2); font-weight: 700; }
+    .menu-btn .chev { color: var(--text-2); }
+    .split-row { display: grid; grid-template-columns: 56px 1fr; align-items: center; gap: 10px; margin: 8px 0; }
+    .split-row b { font-size: 15px; }
   </style>
 </head>
 <body>
 
 <div id="app">
-
-  <!-- ================= HOME ================= -->
-  <section class="screen active" data-screen="home">
-    <h1 id="greeting">Hey! 👋</h1>
-    <p class="muted" id="today-line">Phase 0 — the shell is up.</p>
-
-    <div class="card">
-      <h2>App status</h2>
-      <p class="muted small">Use these to tick off the Phase 0 checklist.</p>
-      <div class="status-list" id="status-list">
-        <div class="row"><span>Running from home screen</span><span class="pill" id="st-standalone">…</span></div>
-        <div class="row"><span>Offline cache (service worker)</span><span class="pill" id="st-sw">…</span></div>
-        <div class="row"><span>Database open</span><span class="pill" id="st-db">…</span></div>
-        <div class="row"><span>Storage protected from eviction</span><span class="pill" id="st-persist">…</span></div>
-        <div class="row"><span>Online right now</span><span class="pill" id="st-online">…</span></div>
-      </div>
-    </div>
-
-    <div class="card stack">
-      <h2>Button feel test</h2>
-      <p class="muted small">Press these. They should sink and spring back.</p>
-      <button class="btn big" onclick="pop(this)">Workout</button>
-      <button class="btn blue" onclick="pop(this)">Food</button>
-      <button class="btn purple" onclick="pop(this)">Progress</button>
-      <div class="row">
-        <button class="btn orange sm" onclick="pop(this)">+8 oz</button>
-        <button class="btn orange sm" onclick="pop(this)">+16 oz</button>
-        <button class="btn neutral sm" onclick="pop(this)">−8</button>
-      </div>
-      <button class="btn ghost">Ghost button</button>
-    </div>
-
-    <div class="card">
-      <h2>Keyboard test</h2>
-      <p class="muted small">Tapping these should NOT zoom the page. Weight gets a decimal keypad; calories a number pad.</p>
-      <div class="field"><label>Weight (lb)</label><input class="input" inputmode="decimal" placeholder="155.5"></div>
-      <div class="field"><label>Calories</label><input class="input" inputmode="numeric" placeholder="650"></div>
-    </div>
-  </section>
-
-  <!-- ================= WORKOUT ================= -->
-  <section class="screen" data-screen="workout">
-    <h1>Workout 🏋️</h1>
-    <div class="card"><p class="muted">Coming in Phase 1: today's exercises, weight entry, "beat last time", and the rest timer.</p></div>
-  </section>
-
-  <!-- ================= FOOD ================= -->
-  <section class="screen" data-screen="food">
+  <section class="screen active" data-screen="home" id="scr-home"></section>
+  <section class="screen" data-screen="workout" id="scr-workout"></section>
+  <section class="screen" data-screen="food" id="scr-food">
     <h1>Food 🍗</h1>
     <div class="card"><p class="muted">Coming in Phase 2: food log with calories + protein, water quick-add, supplements.</p></div>
   </section>
-
-  <!-- ================= PROGRESS ================= -->
-  <section class="screen" data-screen="progress">
+  <section class="screen" data-screen="progress" id="scr-progress">
     <h1>Progress 📈</h1>
     <div class="card"><p class="muted">Coming in Phase 3: weekly calories vs goal, trends, lift trends, bodyweight line graph.</p></div>
   </section>
-
-  <!-- ================= MORE ================= -->
-  <section class="screen" data-screen="more">
-    <h1>More</h1>
-    <div class="card stack">
-      <h2>Storage test</h2>
-      <p class="muted small">Writes a record to IndexedDB, reads it back, and deletes it. Proves saving works from the home-screen app.</p>
-      <button class="btn blue" id="btn-dbtest">Run storage test</button>
-      <p class="small" id="dbtest-out"></p>
-    </div>
-    <div class="card stack">
-      <h2>Updates</h2>
-      <p class="muted small">Version <strong id="app-version"></strong>. If a newer version was uploaded, this forces it to load.</p>
-      <button class="btn neutral" id="btn-update">Check for update</button>
-    </div>
-    <div class="card">
-      <p class="muted small">Milestones · Achievements · Setup · Backup will live here.</p>
-    </div>
-  </section>
-
+  <section class="screen" data-screen="more" id="scr-more"></section>
+  <section class="screen" data-screen="setup" id="scr-setup"></section>
 </div>
 
-<!-- ================= TAB BAR ================= -->
 <nav id="tabbar">
   <button class="tab active" data-tab="home"><span class="ico">🏠</span>Home</button>
   <button class="tab" data-tab="workout"><span class="ico">🏋️</span>Workout</button>
@@ -336,35 +333,60 @@
   <button class="tab" data-tab="more"><span class="ico">⋯</span>More</button>
 </nav>
 
+<!-- Rest timer: big ring or compact pill -->
+<div id="rest" class="hidden">
+  <div class="rbig">
+    <div class="rring">
+      <svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="44"/><circle class="fg" id="rest-fg" cx="50" cy="50" r="44"/></svg>
+      <div class="t"><b id="rest-time">0:00</b><small id="rest-label" class="ellipsis"></small></div>
+    </div>
+    <div class="rctrl">
+      <button class="btn neutral sm" data-action="rest-adjust" data-d="-15">−15s</button>
+      <button class="btn neutral sm" data-action="rest-adjust" data-d="15">+15s</button>
+      <button class="btn orange sm" data-action="rest-skip">Skip</button>
+    </div>
+    <button class="btn ghost sm mt" data-action="rest-mode" data-mode="pill">Minimize ▾</button>
+  </div>
+  <div class="rpill">
+    <span class="grow ellipsis" data-action="rest-mode" data-mode="big">⏱ <b id="rest-time2">0:00</b> <span class="muted small" id="rest-label2"></span></span>
+    <button class="btn neutral xs auto" data-action="rest-adjust" data-d="-15">−15</button>
+    <button class="btn neutral xs auto" data-action="rest-adjust" data-d="15">+15</button>
+    <button class="btn orange xs auto" data-action="rest-skip">Skip</button>
+  </div>
+</div>
+<div id="flash"></div>
+<div id="go"><span>GO!</span></div>
+
+<div id="backdrop"><div id="sheet"></div></div>
 <div id="toast"><span class="grow" id="toast-msg"></span><button id="toast-btn" hidden></button></div>
 
 <script>
 /* ==============================================================
-   Rep Plate v2 — Phase 0
-   Sections: constants · helpers · IndexedDB wrapper · tabs ·
-             service worker + updates · boot
+   Rep Plate v2 — Phase 1
+   Sections: helpers · DB · state · navigation · HOME · WORKOUT ·
+             REST TIMER · SETUP · MORE · sheets · actions · boot
    ============================================================== */
 'use strict';
 
-const APP_VERSION = '0.1.0';   // keep in sync with CACHE_VERSION in sw.js
+const APP_VERSION = '0.2.0';   // keep in sync with CACHE_VERSION in sw.js
 
 /* ---------- helpers ---------- */
 const $  = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const DOW  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DOW3 = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-// Local date as YYYY-MM-DD (phone's own timezone, i.e. Central for you).
-// toISOString() would give UTC and roll the date over at 7pm — avoid it.
 function todayStr(d = new Date()) {
   const p = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
-function uid() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-}
-// Visual feedback: quick scale pop on an element (no vibration on iOS).
-function pop(el) {
-  el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
-}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+const fmtTime = (s) => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+function fmtDate(ymd) { const [y, m, d] = ymd.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+function pop(el) { if (!el) return; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+function shine(el) { if (!el) return; el.classList.remove('shine'); void el.offsetWidth; el.classList.add('shine'); }
 
 let toastTimer = null;
 function toast(msg, { action, onAction, sticky } = {}) {
@@ -378,22 +400,10 @@ function toast(msg, { action, onAction, sticky } = {}) {
 }
 function hideToast() { $('#toast').classList.remove('show'); }
 
-/* ---------- IndexedDB wrapper ----------
-   Every method returns a Promise and is wrapped so a storage failure
-   turns into a toast instead of a crash. Usage:
-     await DB.put('food', {id: uid(), date: todayStr(), name:'Eggs', calories: 300});
-     const rows = await DB.getAll('food');
-     const todays = await DB.byIndex('food', 'date', todayStr());
-     await DB.delete('food', id);
-     await DB.setting('calorieGoal', 2200);  const g = await DB.setting('calorieGoal');
-   ------------------------------------------------------------ */
+/* ---------- IndexedDB wrapper (unchanged from Phase 0) ---------- */
 const DB = (() => {
-  const NAME = 'repplate';
-  const VERSION = 1;
+  const NAME = 'repplate', VERSION = 1;
   let db = null;
-
-  // Stores from the master prompt. keyPath 'id' everywhere except settings ('key').
-  // Each date-based store gets a 'date' index so "today's entries" is one query.
   const SCHEMA = {
     settings:     { keyPath: 'key' },
     exercises:    { keyPath: 'id' },
@@ -406,7 +416,6 @@ const DB = (() => {
     milestones:   { keyPath: 'id', indexes: ['date'] },
     achievements: { keyPath: 'id' },
   };
-
   function open() {
     if (db) return Promise.resolve(db);
     return new Promise((resolve, reject) => {
@@ -421,17 +430,11 @@ const DB = (() => {
           }
         }
       };
-      req.onsuccess = () => {
-        db = req.result;
-        db.onversionchange = () => { db.close(); db = null; };
-        resolve(db);
-      };
+      req.onsuccess = () => { db = req.result; db.onversionchange = () => { db.close(); db = null; }; resolve(db); };
       req.onerror = () => reject(req.error || new Error('Could not open database'));
       req.onblocked = () => reject(new Error('Database blocked — close other copies of the app'));
     });
   }
-
-  // Run one operation inside a transaction and resolve with the request result.
   async function run(store, mode, fn) {
     try {
       const d = await open();
@@ -448,16 +451,14 @@ const DB = (() => {
       throw err;
     }
   }
-
   return {
     open,
-    get:     (store, key)         => run(store, 'readonly',  (s) => s.get(key)),
-    getAll:  (store)              => run(store, 'readonly',  (s) => s.getAll()),
-    byIndex: (store, index, val)  => run(store, 'readonly',  (s) => s.index(index).getAll(val)),
-    put:     (store, obj)         => run(store, 'readwrite', (s) => s.put(obj)),
-    delete:  (store, key)         => run(store, 'readwrite', (s) => s.delete(key)),
-    clear:   (store)              => run(store, 'readwrite', (s) => s.clear()),
-    // settings helper: setting('key') reads, setting('key', value) writes
+    get:     (store, key)        => run(store, 'readonly',  (s) => s.get(key)),
+    getAll:  (store)             => run(store, 'readonly',  (s) => s.getAll()),
+    byIndex: (store, index, val) => run(store, 'readonly',  (s) => s.index(index).getAll(val)),
+    put:     (store, obj)        => run(store, 'readwrite', (s) => s.put(obj)),
+    delete:  (store, key)        => run(store, 'readwrite', (s) => s.delete(key)),
+    clear:   (store)             => run(store, 'readwrite', (s) => s.clear()),
     async setting(key, value) {
       if (value === undefined) { const r = await this.get('settings', key); return r ? r.value : undefined; }
       await this.put('settings', { key, value });
@@ -466,20 +467,510 @@ const DB = (() => {
   };
 })();
 
-/* ---------- tabs ---------- */
-function showTab(name) {
+/* ---------- state ----------
+   S  = settings cache (each key is its own row in the settings store)
+   EX = all exercises, sorted by order
+   ------------------------------------------------------------ */
+const S = {
+  calorieGoal: 2200, proteinGoal: 150, waterGoal: 100,
+  days: [],            // [{id, name}]  e.g. Push / Pull / Legs
+  split: {},           // {0..6: dayId | 'rest'}  0 = Sunday
+  restTimerOn: true, restAutoStart: true,
+};
+let EX = [];
+async function loadState() {
+  const rows = await DB.getAll('settings');
+  for (const r of rows) if (r.key in S && r.value !== undefined && r.value !== null) S[r.key] = r.value;
+  EX = (await DB.getAll('exercises')).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+}
+async function saveS(...keys) { for (const k of keys) await DB.setting(k, S[k]); }
+const dayById = (id) => S.days.find((d) => d.id === id);
+function todayPlan(date = new Date()) {
+  const id = S.split[date.getDay()];
+  const d = id && id !== 'rest' ? dayById(id) : null;
+  return d || null;
+}
+const exsForDay = (dayId) => EX.filter((e) => e.dayId === dayId);
+
+/* ---------- PPL template ---------- */
+const PPL = {
+  Push: [['Bench Press', 4, 8, 180, true], ['Overhead Press', 3, 8, 120, true], ['Incline Dumbbell Press', 3, 10, 90, false], ['Lateral Raise', 3, 15, 60, false], ['Tricep Pushdown', 3, 12, 60, false]],
+  Pull: [['Deadlift', 3, 5, 180, true], ['Barbell Row', 4, 8, 120, true], ['Lat Pulldown', 3, 10, 90, false], ['Face Pull', 3, 15, 60, false], ['Barbell Curl', 3, 12, 60, false]],
+  Legs: [['Squat', 4, 6, 180, true], ['Romanian Deadlift', 3, 8, 120, true], ['Leg Press', 3, 10, 90, false], ['Leg Curl', 3, 12, 60, false], ['Standing Calf Raise', 4, 15, 60, false]],
+};
+async function loadPPL() {
+  for (const e of EX) await DB.delete('exercises', e.id);
+  S.days = []; EX = [];
+  let order = 0;
+  for (const [name, list] of Object.entries(PPL)) {
+    const d = { id: uid(), name };
+    S.days.push(d);
+    for (const [n, sets, reps, rest, main] of list) {
+      const ex = { id: uid(), dayId: d.id, name: n, sets, reps, rest, main, order: order++ };
+      EX.push(ex); await DB.put('exercises', ex);
+    }
+  }
+  const [push, pull, legs] = S.days.map((d) => d.id);
+  S.split = { 0: 'rest', 1: push, 2: pull, 3: legs, 4: push, 5: pull, 6: legs };
+  await saveS('days', 'split');
+}
+
+/* ---------- navigation ---------- */
+let current = 'home';
+const TAB_FOR = { setup: 'more' };
+const RENDER = {};   // screen name -> async render fn
+async function showScreen(name) {
+  current = name;
   $$('.screen').forEach((s) => s.classList.toggle('active', s.dataset.screen === name));
-  $$('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+  const tab = TAB_FOR[name] || name;
+  $$('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === tab));
   window.scrollTo(0, 0);
   try { sessionStorage.setItem('tab', name); } catch (_) {}
+  if (name === 'workout') wakeOn(); else wakeOff();
+  if (RENDER[name]) await RENDER[name]();
 }
-$$('.tab').forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab)));
+$$('.tab').forEach((t) => t.addEventListener('click', () => showScreen(t.dataset.tab)));
 
-/* ---------- service worker + updates ----------
-   On iOS the home-screen app can hang on to an old cached index.html for a while.
-   We register the SW, and when a NEW worker finishes installing we show a toast
-   with a Reload button so you can pull the new version on demand.
-   ------------------------------------------------------------ */
+/* ==============================================================
+   HOME
+   ============================================================== */
+function ring(pct, color, big, small, label) {
+  const r = 26, c = 2 * Math.PI * r, off = c * (1 - Math.min(1, Math.max(0, pct)));
+  return `<div><div class="ring"><svg viewBox="0 0 64 64"><circle class="bg" cx="32" cy="32" r="${r}"/><circle class="fg" cx="32" cy="32" r="${r}" style="stroke:${color};stroke-dasharray:${c};stroke-dashoffset:${off}"/></svg><div class="ring-txt"><b>${big}</b><small>${small}</small></div></div><div class="ring-lbl">${label}</div></div>`;
+}
+RENDER.home = async function renderHome() {
+  const today = todayStr();
+  const [bw, food, water, wk] = await Promise.all([
+    DB.byIndex('bodyweight', 'date', today), DB.byIndex('food', 'date', today),
+    DB.byIndex('water', 'date', today), DB.byIndex('workouts', 'date', today),
+  ]);
+  const cal = food.reduce((a, f) => a + (f.calories || 0), 0);
+  const pro = food.reduce((a, f) => a + (f.protein || 0), 0);
+  const oz  = water.reduce((a, w) => a + (w.oz || 0), 0);
+  const setsLogged = wk.reduce((a, w) => a + (w.weights || []).filter((x) => x != null).length, 0);
+  const h = new Date().getHours();
+  const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  const dateLine = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  const plan = todayPlan();
+
+  let html = `<h1>${greet}! 👋</h1><p class="muted">${dateLine}</p>`;
+
+  if (!S.days.length) {
+    html += `<div class="card accent stack">
+      <h2>Let's set up your split 🗓️</h2>
+      <p class="muted">Load the Push / Pull / Legs template to start fast, or build your own in Setup.</p>
+      <button class="btn" data-action="load-ppl">Load PPL template</button>
+      <button class="btn ghost" data-action="go" data-to="setup">Open Setup</button>
+    </div>`;
+  } else if (plan) {
+    const exs = exsForDay(plan.id);
+    const total = exs.reduce((a, e) => a + e.sets, 0);
+    const done = setsLogged >= total && total > 0;
+    html += `<div class="card accent stack">
+      <div class="row between"><h2>Today is ${esc(plan.name)} day 💪</h2>
+        <span class="pill ${done ? 'ok' : setsLogged ? '' : 'bad'}">${done ? 'Logged ✓' : setsLogged ? `${setsLogged}/${total} sets` : 'Not logged'}</span></div>
+      <p class="muted small">${exs.length} exercises · ${total} sets</p>
+      <button class="btn big" data-action="go" data-to="workout">${done ? 'View workout' : setsLogged ? 'Continue workout' : 'Start workout'}</button>
+    </div>`;
+  } else {
+    html += `<div class="card stack">
+      <div class="row between"><h2>Rest day 😴</h2>${setsLogged ? `<span class="pill ok">${setsLogged} sets logged</span>` : ''}</div>
+      <p class="muted small">Recover, eat, hydrate. Want to train anyway?</p>
+      <button class="btn ghost" data-action="go" data-to="workout">Pick a workout</button>
+    </div>`;
+  }
+
+  html += `<div class="card">
+    <div class="rings">
+      ${ring(cal / S.calorieGoal, 'var(--orange)', cal, `/ ${S.calorieGoal}`, 'Calories')}
+      ${ring(pro / S.proteinGoal, 'var(--purple)', pro + 'g', `/ ${S.proteinGoal}g`, 'Protein')}
+      ${ring(oz / S.waterGoal, 'var(--blue)', oz, `/ ${S.waterGoal} oz`, 'Water')}
+    </div>
+    <p class="muted tiny center mt">Food, water and supplements logging arrive in Phase 2.</p>
+  </div>`;
+
+  const b = bw[0];
+  html += `<div class="card" id="bw-card">
+    <div class="row between"><h2>Morning weight ⚖️</h2>${b ? `<span class="pill ok">${b.weight} lb</span>` : ''}</div>
+    <div class="row mt">
+      <div class="unit grow"><input class="input" id="bw-input" inputmode="decimal" placeholder="${b ? b.weight : '170.0'}" value="${b ? b.weight : ''}"><span>lb</span></div>
+      <button class="btn square" data-action="save-bw">✓</button>
+      ${b ? `<button class="btn neutral square" data-action="delete-bw" data-id="${b.id}">🗑</button>` : ''}
+    </div>
+  </div>`;
+
+  $('#scr-home').innerHTML = html;
+};
+
+async function saveBodyweight() {
+  const input = $('#bw-input'); const w = num(input.value);
+  if (w == null || w <= 0) { toast('Enter your weight first'); input.focus(); return; }
+  const today = todayStr();
+  const existing = (await DB.byIndex('bodyweight', 'date', today))[0];
+  await DB.put('bodyweight', { id: existing ? existing.id : uid(), date: today, weight: w });
+  input.blur();
+  toast(`Saved ${w} lb ✓`);
+  await RENDER.home();
+  pop($('#bw-card'));
+}
+
+/* ==============================================================
+   WORKOUT
+   ============================================================== */
+const W = { date: null, dayId: null, records: {}, last: {} };
+
+RENDER.workout = async function renderWorkout() {
+  const today = todayStr();
+  if (W.date !== today) { W.date = today; W.dayId = null; }
+  if (!W.dayId) { const p = todayPlan(); W.dayId = p ? p.id : null; }
+  const day = dayById(W.dayId);
+  const exs = day ? exsForDay(day.id) : [];
+
+  const todays = await DB.byIndex('workouts', 'date', today);
+  W.records = {}; todays.forEach((r) => { W.records[r.exerciseId] = r; });
+  W.last = {};
+  for (const e of exs) {
+    const all = await DB.byIndex('workouts', 'exerciseId', e.id);
+    const prev = all.filter((r) => r.date < today && (r.weights || []).some((x) => x != null)).sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+    if (prev) W.last[e.id] = prev;
+  }
+
+  let html = `<div class="topbar"><h1>${day ? esc(day.name) + ' day' : 'Workout'} 🏋️</h1>
+    <button class="btn neutral xs auto" data-action="pick-day">${day ? 'Change' : 'Pick a day'}</button></div>`;
+
+  if (!S.days.length) {
+    html += `<div class="card stack"><p class="muted">No workout days yet.</p><button class="btn" data-action="load-ppl">Load PPL template</button><button class="btn ghost" data-action="go" data-to="setup">Open Setup</button></div>`;
+  } else if (!day) {
+    html += `<div class="card stack"><h2>Rest day 😴</h2><p class="muted">Nothing planned for ${DOW[new Date().getDay()]}. Tap <b>Pick a day</b> to train anyway.</p></div>`;
+  } else if (!exs.length) {
+    html += `<div class="card stack"><p class="muted">No exercises in ${esc(day.name)} yet.</p><button class="btn ghost" data-action="go" data-to="setup">Add some in Setup</button></div>`;
+  } else {
+    const totalSets = exs.reduce((a, e) => a + e.sets, 0);
+    const doneSets = exs.reduce((a, e) => a + ((W.records[e.id] || {}).weights || []).filter((x) => x != null).length, 0);
+    html += `<p class="muted small">${doneSets}/${totalSets} sets logged${doneSets >= totalSets ? ' — workout complete! 🎉' : ''}</p>`;
+    for (const e of exs) html += exerciseCard(e);
+  }
+  $('#scr-workout').innerHTML = html;
+};
+
+function exerciseCard(e) {
+  const rec = W.records[e.id] || { weights: [] };
+  const last = W.last[e.id];
+  const lastW = last ? last.weights : [];
+  const lastMax = lastW.some((x) => x != null) ? Math.max(...lastW.filter((x) => x != null)) : null;
+  const doneCount = rec.weights.filter((x) => x != null).length;
+  const allDone = doneCount >= e.sets;
+
+  let rows = '';
+  for (let i = 0; i < e.sets; i++) {
+    const w = rec.weights[i];
+    const target = last ? (lastW[i] != null ? lastW[i] : lastMax) : null;
+    if (w != null) {
+      let arrow = '';
+      if (target != null) arrow = w > target ? '<span class="arrow up">▲ beat it</span>' : w < target ? '<span class="arrow down">▼</span>' : '<span class="arrow same">= same</span>';
+      rows += `<div class="setrow done"><span class="setno">${i + 1}</span><span class="setw">${w} lb ${arrow}</span>
+        <button class="btn neutral xs auto" data-action="edit-set" data-ex="${e.id}" data-set="${i}">Edit</button></div>`;
+    } else {
+      rows += `<div class="setrow"><span class="setno">${i + 1}</span>
+        <div class="unit grow"><input class="input sm set-input" inputmode="decimal" data-ex="${e.id}" data-set="${i}" placeholder="${target != null ? target : 'lb'}"><span>× ${e.reps}</span></div>
+        <button class="btn square sm" data-action="log-set" data-ex="${e.id}" data-set="${i}">✓</button></div>`;
+    }
+  }
+  const lastLine = last
+    ? `<div class="last">Last time (${fmtDate(last.date)}): ${lastW.map((x) => (x == null ? '–' : x)).join(' · ')} lb — beat <b>${lastMax}</b></div>`
+    : `<div class="last">First time logging this — set the bar! 🚀</div>`;
+  return `<div class="card ex-card ${allDone ? 'done' : ''}" id="ex-${e.id}">
+    <div class="row between"><h2>${e.main ? '<span class="star">★</span> ' : ''}${esc(e.name)}</h2><span class="pill ${allDone ? 'ok' : ''}">${allDone ? 'Done ✓' : `${e.sets} × ${e.reps}`}</span></div>
+    ${lastLine}${rows}
+    <button class="btn ghost sm mt" data-action="rest-start" data-sec="${e.rest}" data-label="${esc(e.name)}">⏱ Rest ${fmtTime(e.rest)}</button>
+  </div>`;
+}
+
+async function logSet(exId, idx, raw) {
+  const ex = EX.find((x) => x.id === exId); if (!ex) return;
+  const w = num(raw); const today = todayStr();
+  const rec = W.records[exId] || { id: uid(), date: today, exerciseId: exId, weights: [] };
+  rec.weights = rec.weights.slice();
+  while (rec.weights.length < ex.sets) rec.weights.push(null);
+  rec.weights[idx] = w;
+  await DB.put('workouts', rec);
+  W.records[exId] = rec;
+
+  if (w != null) {
+    const last = W.last[exId];
+    if (last) {
+      const lw = last.weights;
+      const target = lw[idx] != null ? lw[idx] : Math.max(...lw.filter((x) => x != null));
+      if (w > target) toast(`🎉 New best on ${ex.name}: ${w} lb (was ${target})`);
+    }
+    if (S.restTimerOn && S.restAutoStart) startRest(ex.rest, ex.name);
+  }
+  await RENDER.workout();
+  const card = $('#ex-' + exId);
+  if (card) { pop(card); if (w != null && W.last[exId] && w > Math.max(...W.last[exId].weights.filter((x) => x != null))) shine(card); }
+  // Move focus to the next empty set of the same exercise for fast logging.
+  const next = $(`.set-input[data-ex="${exId}"]`);
+  if (next && w != null) next.focus();
+}
+
+function pickDaySheet() {
+  const opts = S.days.map((d) => `<button class="btn ${d.id === W.dayId ? '' : 'neutral'}" data-action="set-day" data-id="${d.id}">${esc(d.name)}</button>`).join('');
+  openSheet(`<h2>Which workout?</h2><p class="muted small">Today's plan: ${todayPlan() ? esc(todayPlan().name) : 'Rest'}</p><div class="sheet-actions">${opts}<button class="btn ghost" data-action="sheet-close">Cancel</button></div>`);
+}
+
+/* ==============================================================
+   REST TIMER — timestamp based. We store endAt (ms) and compute
+   remaining from Date.now(), so backgrounding/locking can't drift it.
+   ============================================================== */
+const T = { endAt: null, total: 0, label: '', mode: 'big', overAt: null, iv: null };
+function persistT() { DB.setting('restTimer', T.endAt ? { endAt: T.endAt, total: T.total, label: T.label } : null).catch(() => {}); }
+function ensureTick() { if (!T.iv) T.iv = setInterval(restTick, 250); }
+function startRest(sec, label) {
+  unlockAudio();
+  T.endAt = Date.now() + sec * 1000; T.total = sec; T.label = label || ''; T.overAt = null; T.mode = 'big';
+  persistT(); ensureTick(); renderRest();
+}
+function adjustRest(delta) {
+  if (!T.endAt || T.overAt) return;
+  T.endAt += delta * 1000;
+  const rem = (T.endAt - Date.now()) / 1000;
+  if (rem <= 0) { finishRest(); return; }
+  T.total = Math.max(T.total + delta, rem, 5);
+  persistT(); renderRest();
+}
+function stopRest() {
+  T.endAt = null; T.overAt = null; T.total = 0;
+  clearInterval(T.iv); T.iv = null;
+  persistT(); renderRest();
+}
+function finishRest(late = false) {
+  T.overAt = T.endAt; T.mode = 'pill';
+  persistT();
+  if (!late) { beep(); $('#flash').classList.remove('on'); void $('#flash').offsetWidth; $('#flash').classList.add('on');
+               $('#go').classList.remove('on'); void $('#go').offsetWidth; $('#go').classList.add('on'); }
+  renderRest();
+}
+function restTick() {
+  if (!T.endAt) return;
+  const now = Date.now();
+  if (now >= T.endAt && !T.overAt) finishRest(now - T.endAt > 3000);   // came back late → no beep
+  if (T.overAt && now - T.endAt > 120000) { stopRest(); return; }       // auto-dismiss after 2 min
+  renderRest();
+}
+function renderRest() {
+  const el = $('#rest');
+  if (!T.endAt) { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  el.className = T.mode + (T.overAt ? ' over' : '');
+  const now = Date.now();
+  if (T.overAt) {
+    const ago = fmtTime((now - T.endAt) / 1000);
+    $('#rest-time').textContent = 'GO!'; $('#rest-label').textContent = `Rest over ${ago} ago`;
+    $('#rest-time2').textContent = 'Rest over'; $('#rest-label2').textContent = `${ago} ago · tap Skip to dismiss`;
+    $('#rest-fg').style.strokeDashoffset = 0;
+    $('#rest-fg').style.stroke = 'var(--green)';
+  } else {
+    const rem = Math.max(0, (T.endAt - now) / 1000);
+    const txt = fmtTime(Math.ceil(rem));
+    $('#rest-time').textContent = txt; $('#rest-label').textContent = T.label;
+    $('#rest-time2').textContent = txt; $('#rest-label2').textContent = T.label;
+    const c = 2 * Math.PI * 44;
+    $('#rest-fg').style.strokeDasharray = c;
+    $('#rest-fg').style.strokeDashoffset = c * (1 - rem / Math.max(T.total, 1));
+    $('#rest-fg').style.stroke = rem <= 10 ? 'var(--orange)' : 'var(--blue)';
+  }
+}
+async function restoreRest() {
+  try {
+    const saved = await DB.setting('restTimer');
+    if (!saved || !saved.endAt) return;
+    T.endAt = saved.endAt; T.total = saved.total || 60; T.label = saved.label || '';
+    if (Date.now() >= T.endAt) {
+      if (Date.now() - T.endAt > 120000) { stopRest(); return; }
+      T.overAt = T.endAt; T.mode = 'pill';
+    } else T.mode = 'pill';
+    ensureTick(); renderRest();
+  } catch (_) {}
+}
+
+/* audio: iOS blocks sound until a user gesture, so we create/resume the
+   AudioContext on the first tap while on the Workout tab. */
+let actx = null;
+function unlockAudio() {
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+  } catch (_) {}
+}
+function beep() {
+  try {
+    if (!actx) return;
+    const t = actx.currentTime;
+    [0, 0.18, 0.36].forEach((d, i) => {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = 'square'; o.frequency.value = i === 2 ? 1320 : 880;
+      g.gain.setValueAtTime(0.0001, t + d);
+      g.gain.exponentialRampToValueAtTime(0.25, t + d + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.15);
+      o.connect(g).connect(actx.destination);
+      o.start(t + d); o.stop(t + d + 0.16);
+    });
+  } catch (_) {}
+}
+['touchend', 'click'].forEach((ev) => document.addEventListener(ev, () => { if (current === 'workout') unlockAudio(); }, { passive: true }));
+
+/* screen wake lock: keeps the screen on while the Workout tab is open.
+   Supported in iOS 16.4+ home-screen apps; silently does nothing elsewhere. */
+let wl = null;
+async function wakeOn() {
+  try {
+    if ('wakeLock' in navigator && !wl) { wl = await navigator.wakeLock.request('screen'); wl.addEventListener('release', () => { wl = null; }); }
+  } catch (_) { wl = null; }
+}
+function wakeOff() { try { wl && wl.release(); } catch (_) {} wl = null; }
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') { restTick(); if (current === 'workout') wakeOn(); }
+});
+
+/* ==============================================================
+   SETUP
+   ============================================================== */
+RENDER.setup = async function renderSetup() {
+  let html = `<div class="topbar"><button class="btn neutral icon" data-action="go" data-to="more">‹</button><h1>Setup</h1></div>`;
+
+  html += `<div class="card">
+    <h2>Daily goals 🎯</h2>
+    <div class="row mt">
+      <div class="field grow"><label>Calories</label><input class="input sm" id="g-cal" inputmode="numeric" value="${S.calorieGoal}"></div>
+      <div class="field grow"><label>Protein g</label><input class="input sm" id="g-pro" inputmode="numeric" value="${S.proteinGoal}"></div>
+      <div class="field grow"><label>Water oz</label><input class="input sm" id="g-water" inputmode="numeric" value="${S.waterGoal}"></div>
+    </div>
+    <button class="btn blue sm" data-action="save-goals">Save goals</button>
+  </div>`;
+
+  html += `<div class="card stack">
+    <h2>Rest timer ⏱</h2>
+    <div class="row between"><span>Rest timer on</span><label class="toggle"><input type="checkbox" data-change="setting" data-key="restTimerOn" ${S.restTimerOn ? 'checked' : ''}><i></i></label></div>
+    <div class="row between"><span>Auto-start when I log a set</span><label class="toggle"><input type="checkbox" data-change="setting" data-key="restAutoStart" ${S.restAutoStart ? 'checked' : ''}><i></i></label></div>
+    <p class="muted tiny">Each exercise has its own rest time (edit it on the exercise). The timer beeps and flashes only while the app is open — iOS won't alert from a locked screen.</p>
+  </div>`;
+
+  html += `<h2 class="mt">Workout days</h2>`;
+  if (!S.days.length) html += `<div class="card stack"><p class="muted">No days yet.</p><button class="btn" data-action="load-ppl">Load PPL template</button></div>`;
+  for (const d of S.days) {
+    const exs = exsForDay(d.id);
+    html += `<div class="card">
+      <div class="row between"><h3>${esc(d.name)}</h3><button class="btn neutral xs auto" data-action="edit-day" data-id="${d.id}">Rename / delete</button></div>
+      <div class="mt">${exs.length ? exs.map((e, i) => `
+        <div class="exrow">
+          <div class="grow"><div class="name">${e.main ? '<span class="star">★</span> ' : ''}${esc(e.name)}</div><div class="meta">${e.sets} × ${e.reps} · rest ${fmtTime(e.rest)}</div></div>
+          <button class="btn neutral xs auto" data-action="move-ex" data-id="${e.id}" data-dir="-1" ${i === 0 ? 'disabled' : ''}>▲</button>
+          <button class="btn neutral xs auto" data-action="move-ex" data-id="${e.id}" data-dir="1" ${i === exs.length - 1 ? 'disabled' : ''}>▼</button>
+          <button class="btn blue xs auto" data-action="edit-ex" data-id="${e.id}">Edit</button>
+        </div>`).join('') : '<p class="muted small">No exercises yet.</p>'}</div>
+      <button class="btn ghost sm mt" data-action="add-ex" data-day="${d.id}">+ Add exercise</button>
+    </div>`;
+  }
+  html += `<button class="btn neutral" data-action="add-day">+ Add a workout day</button>`;
+  if (S.days.length) html += `<button class="btn ghost sm mt" data-action="load-ppl">Replace everything with the PPL template</button>`;
+
+  html += `<div class="card mt"><h2>Weekly split 🗓️</h2>`;
+  for (let i = 0; i < 7; i++) {
+    const cur = S.split[i] || 'rest';
+    html += `<div class="split-row"><b>${DOW3[i]}</b><select class="input sm" data-change="split" data-dow="${i}">
+      <option value="rest" ${cur === 'rest' ? 'selected' : ''}>Rest</option>
+      ${S.days.map((d) => `<option value="${d.id}" ${cur === d.id ? 'selected' : ''}>${esc(d.name)}</option>`).join('')}
+    </select></div>`;
+  }
+  html += `</div>`;
+
+  $('#scr-setup').innerHTML = html;
+};
+
+function exSheet(ex, dayId) {
+  const isNew = !ex;
+  ex = ex || { name: '', sets: 3, reps: 10, rest: 90, main: false, dayId };
+  const chip = (s) => `<button class="chip ${ex.rest === s ? 'on' : ''}" data-action="rest-chip" data-sec="${s}">${fmtTime(s)}</button>`;
+  openSheet(`<h2>${isNew ? 'New exercise' : 'Edit exercise'}</h2>
+    <div class="field"><label>Name</label><input class="input" id="f-name" value="${esc(ex.name)}" placeholder="Bench Press"></div>
+    <div class="row">
+      <div class="field grow"><label>Sets</label><input class="input" id="f-sets" inputmode="numeric" value="${ex.sets}"></div>
+      <div class="field grow"><label>Reps</label><input class="input" id="f-reps" inputmode="numeric" value="${ex.reps}"></div>
+    </div>
+    <div class="field"><label>Rest between sets (seconds)</label><input class="input" id="f-rest" inputmode="numeric" value="${ex.rest}">
+      <div class="chips">${[60, 90, 120, 180, 240].map(chip).join('')}</div></div>
+    <div class="field"><label>Day</label><select class="input" id="f-day">${S.days.map((d) => `<option value="${d.id}" ${d.id === ex.dayId ? 'selected' : ''}>${esc(d.name)}</option>`).join('')}</select></div>
+    <div class="row between"><span>Main lift ★ <span class="muted small">(shown in lift trends)</span></span><label class="toggle"><input type="checkbox" id="f-main" ${ex.main ? 'checked' : ''}><i></i></label></div>
+    <div class="sheet-actions">
+      <button class="btn" data-action="sheet-save-ex" data-id="${isNew ? '' : ex.id}">Save</button>
+      ${isNew ? '' : `<button class="btn red" data-action="sheet-delete-ex" data-id="${ex.id}">Delete exercise</button>`}
+      <button class="btn ghost" data-action="sheet-close">Cancel</button>
+    </div>`);
+  setTimeout(() => isNew && $('#f-name').focus(), 50);
+}
+async function saveExFromSheet(id) {
+  const name = $('#f-name').value.trim();
+  const sets = Math.max(1, Math.round(num($('#f-sets').value) || 0));
+  const reps = Math.max(1, Math.round(num($('#f-reps').value) || 0));
+  const rest = Math.max(0, Math.round(num($('#f-rest').value) || 0));
+  const dayId = $('#f-day').value; const main = $('#f-main').checked;
+  if (!name) { toast('Give it a name'); $('#f-name').focus(); return; }
+  if (!dayId) { toast('Pick a day'); return; }
+  let ex = EX.find((e) => e.id === id);
+  if (!ex) { ex = { id: uid(), order: (Math.max(-1, ...EX.map((e) => e.order ?? 0)) + 1) }; EX.push(ex); }
+  Object.assign(ex, { name, sets, reps, rest, dayId, main });
+  await DB.put('exercises', ex);
+  closeSheet(); toast(`Saved ${name} ✓`);
+  await RENDER.setup();
+}
+function daySheet(day) {
+  const isNew = !day;
+  openSheet(`<h2>${isNew ? 'New workout day' : 'Rename day'}</h2>
+    <div class="field"><label>Name</label><input class="input" id="f-dayname" value="${isNew ? '' : esc(day.name)}" placeholder="Push, Upper, Arms…"></div>
+    <div class="sheet-actions">
+      <button class="btn" data-action="sheet-save-day" data-id="${isNew ? '' : day.id}">Save</button>
+      ${isNew ? '' : `<button class="btn red" data-action="sheet-delete-day" data-id="${day.id}">Delete day + its exercises</button>`}
+      <button class="btn ghost" data-action="sheet-close">Cancel</button>
+    </div>`);
+  setTimeout(() => $('#f-dayname').focus(), 50);
+}
+
+/* ==============================================================
+   MORE
+   ============================================================== */
+RENDER.more = async function renderMore() {
+  const item = (ico, title, sub, to, soon) => `<button class="menu-btn" ${to ? `data-action="go" data-to="${to}"` : 'disabled style="opacity:.55"'}>
+    <span class="ico">${ico}</span><span class="grow">${title}<span class="sub">${sub}</span></span><span class="chev">${soon ? '<span class="pill">soon</span>' : '›'}</span></button>`;
+  $('#scr-more').innerHTML = `<h1>More</h1>
+    ${item('⚙️', 'Setup', 'Goals, exercises, split, rest timer', 'setup')}
+    ${item('🏆', 'Milestones', 'Progress photos, kept forever', null, true)}
+    ${item('🎖️', 'Achievements', 'Badges you\'ve unlocked', null, true)}
+    ${item('💾', 'Backup', 'Export / import your data', null, true)}
+    <div class="card mt">
+      <div class="row between"><h2>App</h2><span class="pill">v${APP_VERSION}</span></div>
+      <div class="status-list mt">
+        <div class="row"><span>Home-screen app</span><span class="pill" id="st-standalone">…</span></div>
+        <div class="row"><span>Offline cache</span><span class="pill" id="st-sw">…</span></div>
+        <div class="row"><span>Storage protected</span><span class="pill" id="st-persist">…</span></div>
+      </div>
+      <div class="row mt">
+        <button class="btn neutral sm" data-action="update">Check for update</button>
+        <button class="btn neutral sm" data-action="dbtest">Storage test</button>
+      </div>
+      <p class="small mt" id="dbtest-out"></p>
+    </div>`;
+  renderStatusPills();
+};
+
+const STATUS = { standalone: null, sw: null, persist: null };
+function setPill(id, text, ok) {
+  STATUS[id.replace('st-', '')] = [text, ok];
+  const el = $('#' + id); if (!el) return;
+  el.textContent = text; el.className = 'pill ' + (ok === true ? 'ok' : ok === false ? 'bad' : '');
+}
+function renderStatusPills() { for (const [k, v] of Object.entries(STATUS)) if (v) setPill('st-' + k, v[0], v[1]); }
+function isStandalone() { return window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches; }
+
 let swReg = null;
 async function registerSW() {
   if (!('serviceWorker' in navigator)) { setPill('st-sw', 'n/a', false); return; }
@@ -490,94 +981,151 @@ async function registerSW() {
       const nw = swReg.installing;
       nw && nw.addEventListener('statechange', () => {
         if (nw.state === 'installed') {
-          if (navigator.serviceWorker.controller) {
-            toast('New version ready', { action: 'Reload', sticky: true, onAction: () => location.reload() });
-          } else {
-            setPill('st-sw', 'cached', true);
-            toast('Ready for offline use ✈️');
-          }
+          if (navigator.serviceWorker.controller) toast('New version ready', { action: 'Reload', sticky: true, onAction: () => location.reload() });
+          else { setPill('st-sw', 'cached', true); toast('Ready for offline use ✈️'); }
         }
       });
     });
     navigator.serviceWorker.addEventListener('controllerchange', () => setPill('st-sw', 'cached', true));
-  } catch (err) {
-    console.error('SW register failed', err);
-    setPill('st-sw', 'failed', false);
-  }
+  } catch (err) { console.error('SW register failed', err); setPill('st-sw', 'failed', false); }
 }
-$('#btn-update').addEventListener('click', async (e) => {
-  pop(e.currentTarget);
-  try {
-    if (swReg) { await swReg.update(); toast('Checked. If a new version exists you\'ll get a Reload button.'); }
-    else toast('No offline cache registered yet.');
-  } catch (_) { toast('Update check failed (offline?)'); }
+
+/* ==============================================================
+   SHEETS + CONFIRM
+   ============================================================== */
+function openSheet(html) { $('#sheet').innerHTML = html; $('#backdrop').classList.add('show'); }
+function closeSheet() { $('#backdrop').classList.remove('show'); $('#sheet').innerHTML = ''; }
+$('#backdrop').addEventListener('click', (e) => { if (e.target.id === 'backdrop') closeSheet(); });
+let confirmResolve = null;
+function ask(msg, okLabel = 'Yes, do it') {
+  return new Promise((resolve) => {
+    confirmResolve = resolve;
+    openSheet(`<h2>Are you sure?</h2><p class="muted">${esc(msg)}</p><div class="sheet-actions">
+      <button class="btn red" data-action="confirm-yes">${esc(okLabel)}</button>
+      <button class="btn ghost" data-action="confirm-no">Cancel</button></div>`);
+  });
+}
+
+/* ==============================================================
+   ACTIONS — one click dispatcher for everything with data-action
+   ============================================================== */
+const ACTIONS = {
+  go: (el) => showScreen(el.dataset.to),
+  'save-bw': saveBodyweight,
+  'delete-bw': async (el) => { await DB.delete('bodyweight', el.dataset.id); toast('Removed'); RENDER.home(); },
+  'load-ppl': async () => {
+    if (S.days.length && !(await ask('This replaces your current days and exercises with the Push / Pull / Legs template. Your logged workouts are kept.', 'Replace'))) return;
+    closeSheet(); await loadPPL(); W.dayId = null; toast('PPL template loaded 💪');
+    if (current === 'setup') RENDER.setup(); else showScreen('setup');
+  },
+  'pick-day': pickDaySheet,
+  'set-day': async (el) => { W.dayId = el.dataset.id; closeSheet(); await RENDER.workout(); },
+  'log-set': async (el) => {
+    const input = $(`.set-input[data-ex="${el.dataset.ex}"][data-set="${el.dataset.set}"]`);
+    if (!input) return;
+    const w = num(input.value);
+    if (w == null) { toast('Enter the weight first'); input.focus(); return; }
+    await logSet(el.dataset.ex, Number(el.dataset.set), w);
+  },
+  'edit-set': async (el) => { await logSet(el.dataset.ex, Number(el.dataset.set), null); const i = $(`.set-input[data-ex="${el.dataset.ex}"][data-set="${el.dataset.set}"]`); if (i) i.focus(); },
+  'rest-start': (el) => { if (!S.restTimerOn) { toast('Rest timer is off (Setup)'); return; } startRest(Number(el.dataset.sec), el.dataset.label); },
+  'rest-adjust': (el) => adjustRest(Number(el.dataset.d)),
+  'rest-skip': stopRest,
+  'rest-mode': (el) => { T.mode = el.dataset.mode; renderRest(); },
+  'save-goals': async (el) => {
+    const c = num($('#g-cal').value), p = num($('#g-pro').value), w = num($('#g-water').value);
+    if (c) S.calorieGoal = Math.round(c); if (p) S.proteinGoal = Math.round(p); if (w) S.waterGoal = Math.round(w);
+    await saveS('calorieGoal', 'proteinGoal', 'waterGoal'); pop(el); toast('Goals saved ✓');
+  },
+  'add-ex': (el) => exSheet(null, el.dataset.day),
+  'edit-ex': (el) => exSheet(EX.find((e) => e.id === el.dataset.id)),
+  'move-ex': async (el) => {
+    const ex = EX.find((e) => e.id === el.dataset.id); const list = exsForDay(ex.dayId);
+    const i = list.indexOf(ex), j = i + Number(el.dataset.dir);
+    if (j < 0 || j >= list.length) return;
+    const other = list[j]; [ex.order, other.order] = [other.order, ex.order];
+    if (ex.order === other.order) { ex.order = other.order + Number(el.dataset.dir); }
+    await DB.put('exercises', ex); await DB.put('exercises', other);
+    EX.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    await RENDER.setup();
+  },
+  'rest-chip': (el) => { $('#f-rest').value = el.dataset.sec; $$('.chip').forEach((c) => c.classList.toggle('on', c === el)); },
+  'sheet-save-ex': (el) => saveExFromSheet(el.dataset.id),
+  'sheet-delete-ex': async (el) => {
+    const ex = EX.find((e) => e.id === el.dataset.id);
+    if (!(await ask(`Delete ${ex.name}? Its logged history stays in the database but won't show anywhere.`, 'Delete'))) { exSheet(ex); return; }
+    await DB.delete('exercises', ex.id); EX = EX.filter((e) => e.id !== ex.id);
+    closeSheet(); toast('Deleted'); await RENDER.setup();
+  },
+  'add-day': () => daySheet(null),
+  'edit-day': (el) => daySheet(dayById(el.dataset.id)),
+  'sheet-save-day': async (el) => {
+    const name = $('#f-dayname').value.trim(); if (!name) { toast('Give it a name'); return; }
+    let d = dayById(el.dataset.id);
+    if (d) d.name = name; else S.days.push({ id: uid(), name });
+    await saveS('days'); closeSheet(); await RENDER.setup();
+  },
+  'sheet-delete-day': async (el) => {
+    const d = dayById(el.dataset.id);
+    if (!(await ask(`Delete ${d.name} and its ${exsForDay(d.id).length} exercises?`, 'Delete'))) { daySheet(d); return; }
+    for (const e of exsForDay(d.id)) await DB.delete('exercises', e.id);
+    EX = EX.filter((e) => e.dayId !== d.id);
+    S.days = S.days.filter((x) => x.id !== d.id);
+    for (const k of Object.keys(S.split)) if (S.split[k] === d.id) S.split[k] = 'rest';
+    await saveS('days', 'split'); closeSheet(); toast('Deleted'); await RENDER.setup();
+  },
+  'sheet-close': closeSheet,
+  'confirm-yes': () => { const r = confirmResolve; confirmResolve = null; closeSheet(); r && r(true); },
+  'confirm-no':  () => { const r = confirmResolve; confirmResolve = null; closeSheet(); r && r(false); },
+  update: async (el) => {
+    pop(el);
+    try { if (swReg) { await swReg.update(); toast('Checked. A Reload button appears if there\'s a new version.'); } else toast('No offline cache registered yet.'); }
+    catch (_) { toast('Update check failed (offline?)'); }
+  },
+  dbtest: async (el) => {
+    pop(el); const out = $('#dbtest-out'); out.textContent = 'Running…';
+    try {
+      await DB.put('food', { id: 'selftest', date: '1999-01-01', name: 'Self-test', calories: 123 });
+      const back = await DB.get('food', 'selftest'); await DB.delete('food', 'selftest'); const gone = await DB.get('food', 'selftest');
+      out.textContent = back && back.calories === 123 && gone === undefined ? '✅ Write, read and delete all worked.' : '⚠️ Something is off.';
+    } catch (err) { out.textContent = '❌ ' + (err && err.message ? err.message : err); }
+  },
+};
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-action]'); if (!el || el.disabled) return;
+  const fn = ACTIONS[el.dataset.action]; if (!fn) return;
+  e.preventDefault();
+  Promise.resolve(fn(el, e)).catch((err) => console.error(err));
 });
-
-/* ---------- status pills (Phase 0 diagnostics) ---------- */
-function setPill(id, text, ok) {
-  const el = $('#' + id);
-  el.textContent = text;
-  el.className = 'pill ' + (ok === true ? 'ok' : ok === false ? 'bad' : '');
-}
-function isStandalone() {
-  return window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
-}
-function updateOnline() { setPill('st-online', navigator.onLine ? 'yes' : 'no (offline)', navigator.onLine ? true : null); }
-window.addEventListener('online', updateOnline);
-window.addEventListener('offline', updateOnline);
-
-/* ---------- storage test (More tab) ---------- */
-$('#btn-dbtest').addEventListener('click', async (e) => {
-  pop(e.currentTarget);
-  const out = $('#dbtest-out');
-  out.textContent = 'Running…';
-  try {
-    const rec = { id: 'selftest', date: todayStr(), name: 'Self-test', calories: 123 };
-    await DB.put('food', rec);
-    const back = await DB.get('food', 'selftest');
-    const todays = await DB.byIndex('food', 'date', todayStr());
-    await DB.delete('food', 'selftest');
-    const gone = await DB.get('food', 'selftest');
-    const okRead = back && back.calories === 123;
-    const okIdx  = todays.some((r) => r.id === 'selftest');
-    const okDel  = gone === undefined;
-    out.textContent = (okRead && okIdx && okDel)
-      ? `✅ Write, read, index query and delete all worked (${todayStr()}).`
-      : `⚠️ read:${okRead} index:${okIdx} delete:${okDel}`;
-  } catch (err) {
-    out.textContent = '❌ ' + (err && err.message ? err.message : err);
-  }
+document.addEventListener('change', async (e) => {
+  const el = e.target.closest('[data-change]'); if (!el) return;
+  if (el.dataset.change === 'setting') { S[el.dataset.key] = el.checked; await saveS(el.dataset.key); toast('Saved ✓'); }
+  if (el.dataset.change === 'split') { S.split[el.dataset.dow] = el.value; await saveS('split'); W.dayId = null; }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const t = e.target;
+  if (t.classList && t.classList.contains('set-input')) { e.preventDefault(); ACTIONS['log-set']({ dataset: { ex: t.dataset.ex, set: t.dataset.set } }); }
+  else if (t.id === 'bw-input') { e.preventDefault(); saveBodyweight(); }
 });
 
 /* ---------- boot ---------- */
 (async function boot() {
-  $('#app-version').textContent = APP_VERSION;
+  setPill('st-standalone', isStandalone() ? 'yes' : 'no (browser tab)', isStandalone());
+  try { await DB.open(); await loadState(); }
+  catch (err) { toast('Could not open the database. ' + (err && err.message ? err.message : '')); }
 
-  // Greeting by time of day.
-  const h = new Date().getHours();
-  $('#greeting').textContent = (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + '! 👋';
-  $('#today-line').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) + ' · Phase 0 shell';
-
-  // Restore the last tab (sessionStorage survives tab switches, not relaunches).
-  try { const t = sessionStorage.getItem('tab'); if (t) showTab(t); } catch (_) {}
-
-  setPill('st-standalone', isStandalone() ? 'yes' : 'no (Safari tab)', isStandalone() ? true : false);
-  updateOnline();
-
-  // Open the DB early so the first real screen doesn't wait on it.
-  try { await DB.open(); setPill('st-db', 'ok', true); }
-  catch (err) { setPill('st-db', 'failed', false); }
-
-  // Ask the browser not to evict our data under storage pressure.
-  // iOS Safari grants this automatically for home-screen apps; in a tab it may say no.
   try {
     if (navigator.storage && navigator.storage.persist) {
-      const already = await navigator.storage.persisted();
-      const granted = already || await navigator.storage.persist();
+      const granted = (await navigator.storage.persisted()) || (await navigator.storage.persist());
       setPill('st-persist', granted ? 'yes' : 'no', granted ? true : null);
     } else setPill('st-persist', 'n/a', null);
   } catch (_) { setPill('st-persist', 'unknown', null); }
 
+  let start = 'home';
+  try { const t = sessionStorage.getItem('tab'); if (t && $(`[data-screen="${t}"]`)) start = t; } catch (_) {}
+  await showScreen(start);
+  await restoreRest();
   registerSW();
 })();
 </script>
