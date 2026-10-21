@@ -323,6 +323,7 @@
   </section>
   <section class="screen" data-screen="more" id="scr-more"></section>
   <section class="screen" data-screen="setup" id="scr-setup"></section>
+  <section class="screen" data-screen="backup" id="scr-backup"></section>
 </div>
 
 <nav id="tabbar">
@@ -368,7 +369,7 @@
    ============================================================== */
 'use strict';
 
-const APP_VERSION = '0.2.0';   // keep in sync with CACHE_VERSION in sw.js
+const APP_VERSION = '0.2.1';   // keep in sync with CACHE_VERSION in sw.js
 
 /* ---------- helpers ---------- */
 const $  = (sel, root = document) => root.querySelector(sel);
@@ -381,6 +382,8 @@ function todayStr(d = new Date()) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+const pad2 = (n) => String(n).padStart(2, '0');
+const timeStr = (d = new Date()) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
 const fmtTime = (s) => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
@@ -476,7 +479,9 @@ const S = {
   days: [],            // [{id, name}]  e.g. Push / Pull / Legs
   split: {},           // {0..6: dayId | 'rest'}  0 = Sunday
   restTimerOn: true, restAutoStart: true,
+  supplements: [{ id: 'creatine', name: 'Creatine', amount: 5, unit: 'g' }, { id: 'caffeine', name: 'Caffeine', amount: 100, unit: 'mg' }],
 };
+const DATA_STORES = ['settings', 'exercises', 'workouts', 'food', 'water', 'supplements', 'bodyweight', 'photos', 'milestones', 'achievements'];
 let EX = [];
 async function loadState() {
   const rows = await DB.getAll('settings');
@@ -517,7 +522,7 @@ async function loadPPL() {
 
 /* ---------- navigation ---------- */
 let current = 'home';
-const TAB_FOR = { setup: 'more' };
+const TAB_FOR = { setup: 'more', backup: 'more' };
 const RENDER = {};   // screen name -> async render fn
 async function showScreen(name) {
   current = name;
@@ -936,6 +941,128 @@ function daySheet(day) {
 }
 
 /* ==============================================================
+   BACKUP — export everything as one JSON file; import a v2 backup
+   or a Rep Plate v1 export (the old Claude-artifact prototype).
+   ============================================================== */
+RENDER.backup = async function renderBackup() {
+  const last = await DB.setting('lastBackup');
+  $('#scr-backup').innerHTML = `<div class="topbar"><button class="btn neutral icon" data-action="go" data-to="more">‹</button><h1>Backup</h1></div>
+    <div class="card stack">
+      <h2>Export 📤</h2>
+      <p class="muted small">Saves everything (settings, exercises, workouts, food, water, supplements, weigh-ins) as one file. On iPhone pick <b>Save to Files</b>.</p>
+      <button class="btn blue" data-action="export">Export backup</button>
+      <p class="muted tiny">${last ? `Last export: ${fmtDate(last)}` : 'No export yet.'}</p>
+    </div>
+    <div class="card stack">
+      <h2>Import 📥</h2>
+      <p class="muted small">Pick a backup file from the Files app, or paste one below. Works with v2 backups and the old Rep Plate v1 export.</p>
+      <input class="input" type="file" id="imp-file" accept=".json,.txt,application/json,text/plain">
+      <textarea class="input" id="imp-text" rows="4" placeholder="…or paste backup text here"></textarea>
+      <button class="btn" data-action="import">Import</button>
+      <p class="small" id="imp-out"></p>
+    </div>`;
+};
+async function exportBackup() {
+  const data = {};
+  for (const s of DATA_STORES) data[s] = s === 'photos' ? [] : await DB.getAll(s);   // photo blobs join in Phase 5
+  const out = { app: 'repplate', version: 2, exportedAt: new Date().toISOString(), exportedDate: todayStr(), data };
+  const name = `repplate-backup-${todayStr()}.json`;
+  const blob = new Blob([JSON.stringify(out)], { type: 'application/json' });
+  const file = new File([blob], name, { type: 'application/json' });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'Rep Plate backup' });
+    } else {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+      document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    }
+    await DB.setting('lastBackup', todayStr()); toast('Backup ready ✓'); RENDER.backup();
+  } catch (err) { if (err && err.name !== 'AbortError') toast('Export failed: ' + err.message); }
+}
+async function importBackup() {
+  const out = $('#imp-out');
+  let text = $('#imp-text').value.trim();
+  const f = $('#imp-file').files[0];
+  if (f) text = (await f.text()).trim();
+  if (!text) { toast('Pick a file or paste a backup first'); return; }
+  let obj; try { obj = JSON.parse(text); } catch (_) { out.textContent = '❌ That isn\'t valid JSON.'; return; }
+  const plan = (obj && obj.app === 'repplate' && obj.version >= 2) ? planV2(obj) : planV1(obj);
+  if (!plan) { out.textContent = '❌ Didn\'t recognize this backup format.'; return; }
+  if (!(await ask(plan.summary, 'Import'))) return;
+  out.textContent = 'Importing…';
+  let n = 0;
+  for (const [store, rows] of Object.entries(plan.writes)) for (const r of rows) { await DB.put(store, r); n++; }
+  if (plan.newS) {
+    Object.assign(S, plan.newS); await saveS(...Object.keys(plan.newS));
+    if (plan.newS.days) {   // split replaced → drop exercises that no longer belong to any day
+      const keep = new Set(plan.newS.days.map((d) => d.id));
+      for (const e of await DB.getAll('exercises')) if (!keep.has(e.dayId)) await DB.delete('exercises', e.id);
+    }
+  }
+  await loadState(); W.dayId = null;
+  out.textContent = `✅ Imported ${n} records.`; toast('Import done 🎉');
+}
+// v2 backup: rows go straight back into their stores.
+function planV2(obj) {
+  const d = obj.data || {}; const writes = {}; let total = 0;
+  for (const s of DATA_STORES) if (Array.isArray(d[s]) && s !== 'photos') { writes[s] = d[s]; total += d[s].length; }
+  const newS = {};
+  for (const r of writes.settings || []) if (r && r.key in S) newS[r.key] = r.value;
+  return { writes, newS, summary: `Rep Plate backup from ${obj.exportedDate ? fmtDate(obj.exportedDate) : obj.exportedAt ? fmtDate(obj.exportedAt.slice(0, 10)) : '?'}: ${total} records. Existing entries with the same id are overwritten; nothing else is deleted.` };
+}
+// v1 export: { settings:{goal,protein,water,splits,week}, days:{ 'YYYY-MM-DD': {foods,lifts,water,weight,supps} } }
+// Also accepts the raw artifact rows ('d-YYYY-MM-DD' keys next to 'settings').
+function planV1(obj) {
+  if (!obj || typeof obj !== 'object') return null;
+  const settings = obj.settings || (obj.splits || obj.goal ? obj : null);
+  const days = {};
+  for (const src of [obj.days, obj.data, obj]) {
+    if (!src || typeof src !== 'object') continue;
+    for (const [k, v] of Object.entries(src)) { const m = /^(?:d-)?(\d{4}-\d{2}-\d{2})$/.exec(k); if (m && v && typeof v === 'object') days[m[1]] = v; }
+  }
+  if (!settings && !Object.keys(days).length) return null;
+  const writes = { exercises: [], workouts: [], food: [], water: [], supplements: [], bodyweight: [] };
+  const newS = {};
+  const MAIN = /bench|overhead|deadlift|barbell row|squat/i;
+  if (settings) {
+    if (+settings.goal) newS.calorieGoal = +settings.goal;
+    if (+settings.protein) newS.proteinGoal = +settings.protein;
+    if (+settings.water) newS.waterGoal = +settings.water;
+    if (Array.isArray(settings.splits)) {
+      newS.days = settings.splits.map((s) => ({ id: 'v1-' + s.id, name: s.name || 'Day' }));
+      let order = 0;
+      for (const s of settings.splits) for (const e of s.exercises || []) {
+        if (!e.name || e.name === 'New exercise') continue;   // untouched placeholder in v1
+        writes.exercises.push({ id: 'v1-' + e.id, dayId: 'v1-' + s.id, name: e.name, sets: +e.sets || 3, reps: +e.reps || 10, rest: MAIN.test(e.name) ? 120 : 90, main: MAIN.test(e.name), order: order++ });
+      }
+    }
+    if (settings.week) {
+      const map = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 }; newS.split = {};
+      for (const [d, i] of Object.entries(map)) { const v = settings.week[d]; newS.split[i] = v ? 'v1-' + v : 'rest'; }
+    }
+  }
+  const exById = {}; writes.exercises.forEach((e) => { exById[e.id] = e; });
+  for (const [date, d] of Object.entries(days)) {
+    (d.foods || []).forEach((f, i) => writes.food.push({ id: 'v1-' + (f.id || `${date}-${i}`), date, time: '', name: f.name || 'Food', calories: +f.cal || 0, protein: f.p == null ? null : +f.p }));
+    if (+d.water) writes.water.push({ id: 'v1-water-' + date, date, time: '', oz: +d.water });
+    if (+d.weight) writes.bodyweight.push({ id: 'v1-bw-' + date, date, weight: +d.weight });
+    for (const [exId, l] of Object.entries(d.lifts || {})) {
+      if (!l || l.w == null) continue;
+      const ex = exById['v1-' + exId]; const sets = ex ? ex.sets : (+l.sets || 3);
+      writes.workouts.push({ id: `v1-${date}-${exId}`, date, exerciseId: 'v1-' + exId, weights: Array(sets).fill(+l.w) });
+    }
+    for (const [name, list] of Object.entries(d.supps || {})) (list || []).forEach((s, i) => {
+      const t = s.t ? new Date(s.t) : null; const isCr = /creat/i.test(name);
+      writes.supplements.push({ id: 'v1-supp-' + (s.t || `${date}-${name}-${i}`), date: t ? todayStr(t) : date, time: t ? timeStr(t) : '', supplementId: name.toLowerCase(), amount: s.a == null ? (isCr ? 5 : 100) : +s.a, unit: isCr ? 'g' : 'mg' });
+    });
+  }
+  const c = (k) => writes[k].length;
+  const summary = `From Rep Plate v1: ${Object.keys(days).length} days · ${c('food')} foods · ${c('workouts')} lifts · ${c('water')} water days · ${c('supplements')} supplement taps · ${c('bodyweight')} weigh-ins` +
+    (settings ? `. Also sets your goals and REPLACES your current split with ${newS.days ? newS.days.length : 0} workout days (${c('exercises')} exercises).` : '.');
+  return { writes, newS, summary };
+}
+
+/* ==============================================================
    MORE
    ============================================================== */
 RENDER.more = async function renderMore() {
@@ -945,7 +1072,7 @@ RENDER.more = async function renderMore() {
     ${item('⚙️', 'Setup', 'Goals, exercises, split, rest timer', 'setup')}
     ${item('🏆', 'Milestones', 'Progress photos, kept forever', null, true)}
     ${item('🎖️', 'Achievements', 'Badges you\'ve unlocked', null, true)}
-    ${item('💾', 'Backup', 'Export / import your data', null, true)}
+    ${item('💾', 'Backup', 'Export / import your data', 'backup')}
     <div class="card mt">
       <div class="row between"><h2>App</h2><span class="pill">v${APP_VERSION}</span></div>
       <div class="status-list mt">
@@ -1075,6 +1202,8 @@ const ACTIONS = {
     await saveS('days', 'split'); closeSheet(); toast('Deleted'); await RENDER.setup();
   },
   'sheet-close': closeSheet,
+  export: exportBackup,
+  import: importBackup,
   'confirm-yes': () => { const r = confirmResolve; confirmResolve = null; closeSheet(); r && r(true); },
   'confirm-no':  () => { const r = confirmResolve; confirmResolve = null; closeSheet(); r && r(false); },
   update: async (el) => {
