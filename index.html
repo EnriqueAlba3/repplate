@@ -416,7 +416,7 @@
    ============================================================== */
 'use strict';
 
-const APP_VERSION = '0.4.0';   // keep in sync with CACHE_VERSION in sw.js
+const APP_VERSION = '0.5.0';   // keep in sync with CACHE_VERSION in sw.js
 
 /* ---------- helpers ---------- */
 const $  = (sel, root = document) => root.querySelector(sel);
@@ -439,6 +439,9 @@ function fmtClock(hhmm) { if (!hhmm) return ''; const [h, m] = hhmm.split(':').m
 function addDays(ymd, n) { const [y, m, d] = ymd.split('-').map(Number); return todayStr(new Date(y, m - 1, d + n)); }
 const fmtNum = (n) => Math.round(n).toLocaleString();
 const sum = (rows, k) => rows.reduce((a, r) => a + (+r[k] || 0), 0);
+function daysBetween(a, b) { return Math.round((parseYmd(b) - parseYmd(a)) / 86400000); }
+const blobToB64 = (blob) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
+const b64ToBlob = (dataUrl) => fetch(dataUrl).then((r) => r.blob());
 function pop(el) { if (!el) return; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
 function shine(el) { if (!el) return; el.classList.remove('shine'); void el.offsetWidth; el.classList.add('shine'); }
 
@@ -645,6 +648,17 @@ RENDER.home = async function renderHome() {
 
   html += waterCard(water, today);
   html += suppCard(supps);
+
+  // Backup reminder: only once there's something worth saving, and not while snoozed.
+  const [lastBackup, snooze, nFood, nWk] = await Promise.all([DB.setting('lastBackup'), DB.setting('backupSnooze'), DB.getAll('food'), DB.getAll('workouts')]);
+  const sinceBackup = lastBackup ? daysBetween(lastBackup, today) : null;
+  if ((nFood.length + nWk.length) > 0 && (sinceBackup == null || sinceBackup > 7) && !(snooze && snooze > today)) {
+    html += `<div class="card" style="border-color:var(--yellow)" id="backup-card">
+      <div class="row between"><h2>Back up your data 💾</h2><span class="pill bad">${sinceBackup == null ? 'never' : sinceBackup + ' days'}</span></div>
+      <p class="muted small">${sinceBackup == null ? 'Nothing has been exported yet.' : `Last export was ${sinceBackup} days ago.`} Everything lives on this phone only — one file in the Files app keeps your history safe.</p>
+      <div class="row"><button class="btn yellow sm" data-action="export">Back up now</button><button class="btn neutral sm auto" data-action="backup-snooze">Later</button></div>
+    </div>`;
+  }
 
   const b = bw[0];
   const allBw = (await DB.getAll('bodyweight')).filter((r) => r.date < today).sort((x, y) => (x.date < y.date ? 1 : -1));
@@ -1314,7 +1328,7 @@ RENDER.backup = async function renderBackup() {
       <h2>Export 📤</h2>
       <p class="muted small">Saves everything (settings, exercises, workouts, food, water, supplements, weigh-ins) as one file. On iPhone pick <b>Save to Files</b>.</p>
       <button class="btn blue" data-action="export">Export backup</button>
-      <p class="muted tiny">${last ? `Last export: ${fmtDate(last)}` : 'No export yet.'}</p>
+      <p class="muted tiny">${last ? `Last export: ${fmtDate(last)} (${daysBetween(last, todayStr()) === 0 ? 'today' : daysBetween(last, todayStr()) + ' days ago'})` : 'No export yet.'}</p>
     </div>
     <div class="card stack">
       <h2>Import 📥</h2>
@@ -1327,7 +1341,9 @@ RENDER.backup = async function renderBackup() {
 };
 async function exportBackup() {
   const data = {};
-  for (const s of DATA_STORES) data[s] = s === 'photos' ? [] : await DB.getAll(s);   // photo blobs join in Phase 5
+  for (const s of DATA_STORES) data[s] = await DB.getAll(s);
+  // Photos are Blobs in IndexedDB; JSON can't hold them, so they travel as base64 data URLs.
+  data.photos = await Promise.all(data.photos.map(async (p) => { const { blob, ...rest } = p; return { ...rest, b64: blob ? await blobToB64(blob) : null }; }));
   const out = { app: 'repplate', version: 2, exportedAt: new Date().toISOString(), exportedDate: todayStr(), data };
   const name = `repplate-backup-${todayStr()}.json`;
   const blob = new Blob([JSON.stringify(out)], { type: 'application/json' });
@@ -1339,7 +1355,7 @@ async function exportBackup() {
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
       document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
     }
-    await DB.setting('lastBackup', todayStr()); toast('Backup ready ✓'); RENDER.backup();
+    await DB.setting('lastBackup', todayStr()); await DB.setting('backupSnooze', null); toast('Backup saved ✓'); rerender();
   } catch (err) { if (err && err.name !== 'AbortError') toast('Export failed: ' + err.message); }
 }
 async function importBackup() {
@@ -1354,7 +1370,10 @@ async function importBackup() {
   if (!(await ask(plan.summary, 'Import'))) return;
   out.textContent = 'Importing…';
   let n = 0;
-  for (const [store, rows] of Object.entries(plan.writes)) for (const r of rows) { await DB.put(store, r); n++; }
+  for (const [store, rows] of Object.entries(plan.writes)) for (const r of rows) {
+    if (store === 'photos' && r.b64) { try { r.blob = await b64ToBlob(r.b64); } catch (_) {} delete r.b64; }
+    await DB.put(store, r); n++;
+  }
   if (plan.newS) {
     Object.assign(S, plan.newS); await saveS(...Object.keys(plan.newS));
     if (plan.newS.days) {   // split replaced → drop exercises that no longer belong to any day
@@ -1368,7 +1387,7 @@ async function importBackup() {
 // v2 backup: rows go straight back into their stores.
 function planV2(obj) {
   const d = obj.data || {}; const writes = {}; let total = 0;
-  for (const s of DATA_STORES) if (Array.isArray(d[s]) && s !== 'photos') { writes[s] = d[s]; total += d[s].length; }
+  for (const s of DATA_STORES) if (Array.isArray(d[s])) { writes[s] = d[s]; total += d[s].length; }
   const newS = {};
   for (const r of writes.settings || []) if (r && r.key in S) newS[r.key] = r.value;
   return { writes, newS, summary: `Rep Plate backup from ${obj.exportedDate ? fmtDate(obj.exportedDate) : obj.exportedAt ? fmtDate(obj.exportedAt.slice(0, 10)) : '?'}: ${total} records. Existing entries with the same id are overwritten; nothing else is deleted.` };
@@ -1584,6 +1603,7 @@ const ACTIONS = {
   },
   'food-delete': async (el) => { await DB.delete('food', el.dataset.id); closeSheet(); toast('Deleted'); rerender(); },
   'bw-range': (el) => { P.range = Number(el.dataset.n); RENDER.progress(); },
+  'backup-snooze': async () => { await DB.setting('backupSnooze', addDays(todayStr(), 3)); toast('OK — I\'ll remind you in 3 days'); RENDER.home(); },
   'add-supp': () => suppSheet(null),
   'edit-supp': (el) => suppSheet(S.supplements.find((s) => s.id === el.dataset.id)),
   'unit-chip': (el) => { $('#f-supp-unit').value = el.dataset.unit; $$('.chip').forEach((c) => c.classList.toggle('on', c === el)); },
