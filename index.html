@@ -331,6 +331,34 @@
     .tag button { border: 0; background: var(--line); color: var(--text-2); width: 22px; height: 22px; border-radius: 50%; font: inherit; font-weight: 900; font-size: 12px; }
     .daynav { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .daynav h1 { flex: 1; text-align: center; font-size: 22px; }
+
+    /* ============================================================
+       PROGRESS (SVG charts + trend tiles)
+       ============================================================ */
+    .chart { width: 100%; height: auto; display: block; margin-top: 8px; font-family: var(--font); }
+    .chart text { fill: var(--text-2); font-size: 11px; font-weight: 800; }
+    .chart .val { fill: var(--text); font-size: 10px; }
+    .chart .grid { stroke: var(--line); stroke-width: 1; }
+    .chart .goal { stroke: var(--green); stroke-width: 2; stroke-dasharray: 4 4; }
+    .chart .bar { fill: var(--orange); }
+    .chart .bar.over { fill: var(--red); }
+    .chart .bar.today { stroke: var(--text); stroke-width: 2; }
+    .chart .bar.future { fill: var(--bg-3); }
+    .chart .line { fill: none; stroke: var(--blue); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+    .chart .area { fill: var(--blue); opacity: .12; }
+    .chart .dot { fill: var(--bg); stroke: var(--blue); stroke-width: 2.5; }
+    .chart .dot.last { fill: var(--blue); }
+    .trends { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .tile { background: var(--bg-3); border-radius: 14px; padding: 10px 12px; }
+    .tile .k { font-size: 11px; font-weight: 800; color: var(--text-2); text-transform: uppercase; letter-spacing: .05em; }
+    .tile .v { font-size: 20px; font-weight: 800; line-height: 1.2; margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .tile .d { font-size: 12px; font-weight: 800; margin-top: 2px; }
+    .up { color: var(--green); } .down { color: var(--red); } .flat { color: var(--text-2); }
+    .lift-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 2px solid var(--line); }
+    .lift-row:first-child { border-top: 0; }
+    .lift-row .n { flex: 1; font-weight: 800; }
+    .lift-row .w { font-weight: 800; font-variant-numeric: tabular-nums; }
+    .lift-row .prev { font-size: 12px; color: var(--text-2); font-weight: 700; }
   </style>
 </head>
 <body>
@@ -339,10 +367,7 @@
   <section class="screen active" data-screen="home" id="scr-home"></section>
   <section class="screen" data-screen="workout" id="scr-workout"></section>
   <section class="screen" data-screen="food" id="scr-food"></section>
-  <section class="screen" data-screen="progress" id="scr-progress">
-    <h1>Progress 📈</h1>
-    <div class="card"><p class="muted">Coming in Phase 3: weekly calories vs goal, trends, lift trends, bodyweight line graph.</p></div>
-  </section>
+  <section class="screen" data-screen="progress" id="scr-progress"></section>
   <section class="screen" data-screen="more" id="scr-more"></section>
   <section class="screen" data-screen="setup" id="scr-setup"></section>
   <section class="screen" data-screen="backup" id="scr-backup"></section>
@@ -391,7 +416,7 @@
    ============================================================== */
 'use strict';
 
-const APP_VERSION = '0.3.0';   // keep in sync with CACHE_VERSION in sw.js
+const APP_VERSION = '0.4.0';   // keep in sync with CACHE_VERSION in sw.js
 
 /* ---------- helpers ---------- */
 const $  = (sel, root = document) => root.querySelector(sel);
@@ -793,6 +818,143 @@ async function foodSheet(id) {
       <button class="btn ghost" data-action="sheet-close">Cancel</button>
     </div>`);
 }
+
+/* ==============================================================
+   PROGRESS — weeks start on Monday. "Average" means per logged day,
+   so an unlogged day doesn't drag the number down.
+   ============================================================== */
+const P = { range: 30 };
+function parseYmd(ymd) { const [y, m, d] = ymd.split('-').map(Number); return new Date(y, m - 1, d); }
+function weekStart(ymd) { const d = parseYmd(ymd); const dow = (d.getDay() + 6) % 7; return todayStr(new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow)); }
+function monthStart(ymd) { return ymd.slice(0, 8) + '01'; }
+const between = (r, a, b) => r.date >= a && r.date <= b;
+// per-day totals of `key` for rows within [a, b]
+function dailyTotals(rows, a, b, key) {
+  const m = {};
+  for (const r of rows) if (between(r, a, b)) m[r.date] = (m[r.date] || 0) + (+r[key] || 0);
+  return m;
+}
+function avgPerDay(rows, a, b, key) {
+  const m = dailyTotals(rows, a, b, key); const days = Object.keys(m).length;
+  return { avg: days ? Object.values(m).reduce((x, y) => x + y, 0) / days : null, days };
+}
+// arrow + color: green when the number moved closer to the goal (or up, when no goal)
+function delta(cur, prev, goal, unit) {
+  if (cur == null || prev == null) return `<div class="d flat">${prev == null ? 'no earlier data' : 'nothing logged yet'}</div>`;
+  const diff = cur - prev; if (Math.abs(diff) < 0.5) return `<div class="d flat">= same as before</div>`;
+  const better = goal != null ? Math.abs(cur - goal) <= Math.abs(prev - goal) : diff > 0;
+  const pct = prev ? Math.round(Math.abs(diff) / prev * 100) : null;
+  return `<div class="d ${better ? 'up' : 'down'}">${diff > 0 ? '▲' : '▼'} ${fmtNum(Math.abs(diff))}${unit}${pct != null ? ` (${pct}%)` : ''} vs before</div>`;
+}
+function tile(k, v, d) { return `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div>${d}</div>`; }
+
+function barChart(days, vals, goal, today) {
+  const W = 340, H = 160, L = 6, R = 6, T = 18, B = 22;
+  const max = Math.max(goal * 1.15, ...vals, 1), plotH = H - T - B, bw = (W - L - R) / 7;
+  const y = (v) => T + plotH - (v / max) * plotH;
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Calories this week">`;
+  s += `<line class="grid" x1="${L}" x2="${W - R}" y1="${T + plotH}" y2="${T + plotH}"/>`;
+  s += `<line class="goal" x1="${L}" x2="${W - R}" y1="${y(goal)}" y2="${y(goal)}"/><text x="${W - R}" y="${y(goal) - 4}" text-anchor="end" style="fill:var(--green)">goal ${fmtNum(goal)}</text>`;
+  days.forEach((d, i) => {
+    const v = vals[i], x = L + i * bw + 6, w = bw - 12, future = d > today;
+    const h = future || !v ? 0 : Math.max(3, (v / max) * plotH);
+    const cls = 'bar' + (v > goal ? ' over' : '') + (d === today ? ' today' : '') + (future ? ' future' : '');
+    s += `<rect class="${cls}" x="${x}" y="${future || !v ? T + plotH - 3 : y(v)}" width="${w}" height="${future || !v ? 3 : h}" rx="5"/>`;
+    if (v) s += `<text class="val" x="${x + w / 2}" y="${y(v) - 4}" text-anchor="middle">${v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v}</text>`;
+    s += `<text x="${x + w / 2}" y="${H - 6}" text-anchor="middle" ${d === today ? 'style="fill:var(--text)"' : ''}>${'MTWTFSS'[i]}</text>`;
+  });
+  return s + `</svg>`;
+}
+function lineChart(pts) {
+  const W = 340, H = 170, L = 34, R = 10, T = 12, B = 22;
+  const ws = pts.map((p) => p.weight);
+  let lo = Math.floor(Math.min(...ws)) - 1, hi = Math.ceil(Math.max(...ws)) + 1; if (hi - lo < 4) { lo -= 1; hi += 1; }
+  const t0 = parseYmd(pts[0].date).getTime(), t1 = parseYmd(pts[pts.length - 1].date).getTime(), span = Math.max(1, t1 - t0);
+  const x = (d) => L + ((parseYmd(d).getTime() - t0) / span) * (W - L - R);
+  const y = (w) => T + (1 - (w - lo) / (hi - lo)) * (H - T - B);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Bodyweight over time">`;
+  [lo, (lo + hi) / 2, hi].forEach((g) => { s += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(g)}" y2="${y(g)}"/><text x="${L - 6}" y="${y(g) + 4}" text-anchor="end">${Math.round(g * 10) / 10}</text>`; });
+  if (pts.length > 1) {
+    const d = pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.date).toFixed(1)},${y(p.weight).toFixed(1)}`).join(' ');
+    s += `<path class="area" d="${d} L${x(pts[pts.length - 1].date).toFixed(1)},${y(lo)} L${x(pts[0].date).toFixed(1)},${y(lo)} Z"/><path class="line" d="${d}"/>`;
+  }
+  pts.forEach((p, i) => { s += `<circle class="dot ${i === pts.length - 1 ? 'last' : ''}" cx="${x(p.date)}" cy="${y(p.weight)}" r="${pts.length > 40 ? 2.5 : 4}"/>`; });
+  s += `<text x="${L}" y="${H - 6}">${fmtDate(pts[0].date)}</text><text x="${W - R}" y="${H - 6}" text-anchor="end">${fmtDate(pts[pts.length - 1].date)}</text>`;
+  return s + `</svg>`;
+}
+
+RENDER.progress = async function renderProgress() {
+  const today = todayStr();
+  const [food, water, workouts, bw] = await Promise.all([DB.getAll('food'), DB.getAll('water'), DB.getAll('workouts'), DB.getAll('bodyweight')]);
+  const ws = weekStart(today), we = addDays(ws, 6), lws = addDays(ws, -7), lwe = addDays(ws, -1);
+  const ms = monthStart(today), lms = monthStart(addDays(ms, -1)), lme = addDays(ms, -1);
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(ws, i));
+
+  let html = `<h1>Progress 📈</h1>`;
+
+  // 1. This week's calories vs goal
+  const calByDay = dailyTotals(food, ws, we, 'calories');
+  const vals = weekDays.map((d) => calByDay[d] || 0);
+  const logged = weekDays.filter((d) => calByDay[d]);
+  const wkAvg = logged.length ? logged.reduce((a, d) => a + calByDay[d], 0) / logged.length : null;
+  html += `<div class="card">
+    <div class="row between"><h2>This week 🔥</h2><span class="pill ${wkAvg == null ? '' : wkAvg <= S.calorieGoal ? 'ok' : 'bad'}">${wkAvg == null ? 'no food logged' : `avg ${fmtNum(wkAvg)} / ${fmtNum(S.calorieGoal)}`}</span></div>
+    ${barChart(weekDays, vals, S.calorieGoal, today)}
+    <p class="muted tiny center">${logged.length} of ${weekDays.filter((d) => d <= today).length} days logged · ${weekDays.filter((d) => calByDay[d] > S.calorieGoal).length} over goal</p>
+  </div>`;
+
+  // 2 + 3. Trends
+  const cw = avgPerDay(food, ws, we, 'calories'), lw = avgPerDay(food, lws, lwe, 'calories');
+  const cm = avgPerDay(food, ms, today, 'calories'), lm = avgPerDay(food, lms, lme, 'calories');
+  const pw = avgPerDay(food, ws, we, 'protein'), plw = avgPerDay(food, lws, lwe, 'protein');
+  const ww = avgPerDay(water, ws, we, 'oz'), wlw = avgPerDay(water, lws, lwe, 'oz');
+  const f = (r) => (r.avg == null ? '—' : fmtNum(r.avg));
+  html += `<div class="card"><h2>Trends 📊</h2><p class="muted tiny">Daily averages over logged days. Green = closer to your goal.</p>
+    <div class="trends">
+      ${tile('Calories · this week', f(cw), delta(cw.avg, lw.avg, S.calorieGoal, ''))}
+      ${tile('Calories · this month', f(cm), delta(cm.avg, lm.avg, S.calorieGoal, ''))}
+      ${tile('Protein · this week', f(pw) + (pw.avg != null ? ' g' : ''), delta(pw.avg, plw.avg, S.proteinGoal, ' g'))}
+      ${tile('Water · this week', f(ww) + (ww.avg != null ? ' oz' : ''), delta(ww.avg, wlw.avg, S.waterGoal, ' oz'))}
+    </div>
+    <p class="muted tiny mt">Last week: ${f(lw)} cal · ${f(plw)}${plw.avg != null ? ' g' : ''} protein · ${f(wlw)}${wlw.avg != null ? ' oz' : ''} water. Last month: ${f(lm)} cal.</p>
+  </div>`;
+
+  // 4. Lift trends per main lift
+  const mains = EX.filter((e) => e.main);
+  const topIn = (exId, a, b) => { const rows = workouts.filter((r) => r.exerciseId === exId && between(r, a, b)); const ws = rows.flatMap((r) => (r.weights || []).filter((x) => x != null)); return ws.length ? Math.max(...ws) : null; };
+  const best = (exId) => { const ws = workouts.filter((r) => r.exerciseId === exId).flatMap((r) => (r.weights || []).filter((x) => x != null)); return ws.length ? Math.max(...ws) : null; };
+  html += `<div class="card"><h2>Lifts 🏋️</h2><p class="muted tiny">Top set this week vs last week, per main lift (★ in Setup).</p>`;
+  if (!mains.length) html += `<p class="muted small mt">No main lifts flagged yet — star some exercises in Setup.</p>`;
+  else html += `<div class="mt">` + mains.map((e) => {
+    const cur = topIn(e.id, ws, we), prev = topIn(e.id, lws, lwe), b = best(e.id);
+    let arrow = '<span class="flat">—</span>';
+    if (b == null) arrow = '<span class="flat">no logs yet</span>';
+    else if (cur != null && prev != null) arrow = cur > prev ? `<span class="up">▲ +${cur - prev}</span>` : cur < prev ? `<span class="down">▼ ${cur - prev}</span>` : `<span class="flat">= same</span>`;
+    else if (cur != null) arrow = '<span class="flat">no last week</span>';
+    else if (prev != null) arrow = '<span class="flat">not yet this week</span>';
+    return `<div class="lift-row"><div class="n">${esc(e.name)}<div class="prev">last week ${prev != null ? prev + ' lb' : '—'}${b != null ? ` · best ${b} lb` : ''}</div></div><div class="w">${cur != null ? cur + ' lb' : '—'}</div><div class="small">${arrow}</div></div>`;
+  }).join('') + `</div>`;
+  html += `</div>`;
+
+  // 5. Bodyweight line graph
+  const all = bw.slice().sort((a, b) => (a.date < b.date ? -1 : 1));
+  const from = P.range ? addDays(today, -P.range) : '0000-00-00';
+  const pts = all.filter((p) => p.date >= from);
+  const chip = (n, label) => `<button class="chip ${P.range === n ? 'on' : ''}" data-action="bw-range" data-n="${n}">${label}</button>`;
+  html += `<div class="card"><h2>Bodyweight ⚖️</h2><div class="chips">${chip(30, '30 days')}${chip(90, '90 days')}${chip(0, 'All time')}</div>`;
+  if (pts.length) {
+    const first = pts[0], last = pts[pts.length - 1], ch = last.weight - first.weight;
+    html += `<div class="row between mt"><b style="font-size:22px">${last.weight} lb</b><span class="pill">${pts.length > 1 ? `${ch > 0 ? '+' : ''}${Math.round(ch * 10) / 10} lb since ${fmtDate(first.date)}` : 'first weigh-in'}</span></div>`;
+    html += lineChart(pts);
+    html += `<p class="muted tiny center">${pts.length} weigh-in${pts.length === 1 ? '' : 's'}${all.length > pts.length ? ` · ${all.length} total` : ''}</p>`;
+  } else html += `<p class="muted small mt">${all.length ? 'No weigh-ins in this range.' : 'Log your morning weight on Home to start the graph.'}</p>`;
+  html += `</div>`;
+
+  // 6. Milestones (Phase 6)
+  html += `<div class="card"><div class="row between"><h2>Milestones 🏆</h2><span class="pill">Phase 6</span></div><p class="muted small mt">Your progress-photo journal will live here.</p></div>`;
+
+  $('#scr-progress').innerHTML = html;
+};
 
 /* ==============================================================
    WORKOUT
@@ -1421,6 +1583,7 @@ const ACTIONS = {
     await DB.put('food', f); closeSheet(); toast('Saved ✓'); rerender();
   },
   'food-delete': async (el) => { await DB.delete('food', el.dataset.id); closeSheet(); toast('Deleted'); rerender(); },
+  'bw-range': (el) => { P.range = Number(el.dataset.n); RENDER.progress(); },
   'add-supp': () => suppSheet(null),
   'edit-supp': (el) => suppSheet(S.supplements.find((s) => s.id === el.dataset.id)),
   'unit-chip': (el) => { $('#f-supp-unit').value = el.dataset.unit; $$('.chip').forEach((c) => c.classList.toggle('on', c === el)); },
