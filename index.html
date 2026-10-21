@@ -329,6 +329,16 @@
     .tagrow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
     .tag { display: inline-flex; align-items: center; gap: 6px; background: var(--bg-3); border-radius: 999px; padding: 4px 6px 4px 10px; font-size: 13px; font-weight: 800; }
     .tag button { border: 0; background: var(--line); color: var(--text-2); width: 22px; height: 22px; border-radius: 50%; font: inherit; font-weight: 900; font-size: 12px; }
+    .thumb { width: 46px; height: 46px; border-radius: 10px; object-fit: cover; flex: none; background: var(--bg-3); }
+    .photo-btn { display: flex; align-items: center; gap: 10px; border: 2px dashed var(--line); border-radius: 14px; padding: 8px 12px; min-height: 52px; cursor: pointer; background: var(--bg); }
+    .photo-btn img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; }
+    .photo-btn input { display: none; }
+    .photo-btn span { font-weight: 800; color: var(--blue); }
+    .photo-big { width: 100%; max-height: 50vh; object-fit: contain; border-radius: 14px; background: var(--bg-3); }
+    #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.92); display: none; align-items: center; justify-content: center; z-index: 110; padding: 16px; }
+    #lightbox.show { display: flex; }
+    #lightbox img { max-width: 100%; max-height: 100%; border-radius: 12px; }
+    #lightbox .cap { position: absolute; left: 0; right: 0; bottom: calc(var(--safe-bottom) + 16px); text-align: center; color: #fff; font-weight: 800; }
     .daynav { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
     .daynav h1 { flex: 1; text-align: center; font-size: 22px; }
 
@@ -359,6 +369,73 @@
     .lift-row .n { flex: 1; font-weight: 800; }
     .lift-row .w { font-weight: 800; font-variant-numeric: tabular-nums; }
     .lift-row .prev { font-size: 12px; color: var(--text-2); font-weight: 700; }
+
+    /* ============================================================
+       MILESTONES (swipeable timeline)
+       ============================================================ */
+    .tl { position: relative; display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; margin-top: 10px; scrollbar-width: none; }
+    .tl::-webkit-scrollbar { display: none; }
+    .tl-slide { flex: 0 0 100%; scroll-snap-align: start; scroll-snap-stop: always; }
+    .tl-photo { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 14px; background: var(--bg-3); display: block; }
+    .tl-dots { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
+    .tl-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); transition: background .15s, transform .15s; }
+    .tl-dots i.on { background: var(--blue); transform: scale(1.3); }
+    .strip { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 4px; scrollbar-width: none; }
+    .strip::-webkit-scrollbar { display: none; }
+    .strip img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; flex: none; background: var(--bg-3); }
+    .mstrip { display: flex; gap: 10px; overflow-x: auto; margin-top: 10px; padding-bottom: 4px; scrollbar-width: none; }
+    .mstrip::-webkit-scrollbar { display: none; }
+    .mthumb { flex: none; width: 88px; text-align: center; cursor: pointer; }
+    .mthumb img { width: 88px; height: 117px; border-radius: 12px; object-fit: cover; background: var(--bg-3); display: block; }
+    .mthumb small { display: block; font-size: 11px; font-weight: 800; color: var(--text-2); margin-top: 4px; white-space: nowrap; }
+    .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    .compare img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 12px; background: var(--bg-3); display: block; }
+    .compare small { display: block; text-align: center; font-weight: 800; font-size: 12px; color: var(--text-2); margin-top: 4px; }
+    .ms-badge { background: #fff3c4; color: #7a5a00; }
+    @media (prefers-color-scheme: dark) { .ms-badge { background: #4a3a00; color: #ffe08a; } }
+
+    /* ============================================================
+       ACHIEVEMENTS (badge grid + unlock card)
+       ============================================================ */
+    .badges { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+    .badge { background: var(--bg-2); border: 2px solid var(--line); border-radius: 16px; padding: 12px 6px 10px; font: inherit; color: var(--text); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+    .badge:active { transform: scale(.96); }
+    .badge.on { border-color: var(--yellow); }
+    .bicon { width: 56px; height: 56px; border-radius: 50%; background: var(--bg-3); display: inline-flex; align-items: center; justify-content: center; font-size: 30px; filter: grayscale(1); opacity: .45; }
+    .badge.on .bicon, .bicon.on { background: var(--yellow); box-shadow: 0 4px 0 0 var(--yellow-dark); filter: none; opacity: 1; }
+    .bicon.big { width: 96px; height: 96px; font-size: 52px; }
+    .badge .bname { font-weight: 800; font-size: 13px; line-height: 1.15; margin-top: 4px; }
+    .badge .bsub { font-size: 11px; color: var(--text-2); font-weight: 700; line-height: 1.2; }
+    .chips.center { justify-content: center; }
+    #unlock { position: fixed; inset: 0; z-index: 120; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.6); padding: 24px; }
+    #unlock.show { display: flex; }
+    .unlock-card { position: relative; overflow: hidden; background: var(--bg); border-radius: 24px; padding: 28px 20px 20px; width: 100%; max-width: 360px; text-align: center; animation: cardIn .4s cubic-bezier(.2,1.4,.4,1); }
+    @keyframes cardIn { from { transform: translateY(40px) scale(.9); opacity: 0; } to { transform: none; opacity: 1; } }
+    .unlock-rays { position: absolute; left: 50%; top: 88px; width: 460px; height: 460px; margin: -230px 0 0 -230px; border-radius: 50%; pointer-events: none;
+      background: repeating-conic-gradient(from 0deg, rgba(255,200,0,.2) 0 12deg, transparent 12deg 24deg); animation: spin 16s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .unlock-badge { position: relative; width: 120px; height: 120px; margin: 0 auto; border-radius: 50%; background: var(--yellow); box-shadow: 0 8px 0 0 var(--yellow-dark); display: flex; align-items: center; justify-content: center; font-size: 64px; animation: badgeIn .7s cubic-bezier(.2,1.6,.4,1) .1s both; }
+    @keyframes badgeIn { 0% { transform: scale(0) rotate(-30deg); } 100% { transform: scale(1) rotate(0); } }
+    .unlock-title { position: relative; margin: 18px 0 4px; font-weight: 800; color: var(--orange); text-transform: uppercase; letter-spacing: .08em; font-size: 13px; }
+    .unlock-card h2, .unlock-card p, .unlock-card .chips, .unlock-card .btn { position: relative; }
+    .unlock-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+    .unlock-confetti i { position: absolute; top: -14px; width: 10px; height: 14px; border-radius: 2px; animation: fall 2s ease-in forwards; }
+    @keyframes fall { to { transform: translateY(560px) rotate(720deg); opacity: 0; } }
+
+    /* ============================================================
+       POLISH — micro-animations, image fade-in, reduced motion
+       ============================================================ */
+    @keyframes tabPop { 0% { transform: scale(.8); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+    .tab.active .ico { animation: tabPop .25s ease-out; }
+    .setrow.done .setno { animation: pop .3s ease-out; }
+    .ex-card.done { animation: shine .7s ease-out; }
+    .thumb, .strip img, .mthumb img, .tl-photo, .compare img, .photo-big { opacity: 0; transition: opacity .25s ease; }
+    .thumb.ok, .strip img.ok, .mthumb img.ok, .tl-photo.ok, .compare img.ok, .photo-big.ok { opacity: 1; }
+    .streak { background: #ffe9c7; color: #8a4b00; }
+    @media (prefers-color-scheme: dark) { .streak { background: #4a2d00; color: #ffc27a; } .unlock-rays { opacity: .55; } .unlock-card { background: var(--bg-2); } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+    }
   </style>
 </head>
 <body>
@@ -371,6 +448,22 @@
   <section class="screen" data-screen="more" id="scr-more"></section>
   <section class="screen" data-screen="setup" id="scr-setup"></section>
   <section class="screen" data-screen="backup" id="scr-backup"></section>
+  <section class="screen" data-screen="milestones" id="scr-milestones"></section>
+  <section class="screen" data-screen="achievements" id="scr-achievements"></section>
+</div>
+
+<!-- Achievement unlock card -->
+<div id="unlock" data-action="ach-close">
+  <div class="unlock-card">
+    <div class="unlock-rays"></div>
+    <div class="unlock-confetti" id="unlock-confetti"></div>
+    <div class="unlock-badge" id="unlock-icon">🏆</div>
+    <p class="unlock-title" id="unlock-title">Achievement unlocked!</p>
+    <h2 id="unlock-name"></h2>
+    <p class="muted small" id="unlock-hint"></p>
+    <div class="chips center" id="unlock-more"></div>
+    <button class="btn yellow mt" data-action="ach-close">Continue</button>
+  </div>
 </div>
 
 <nav id="tabbar">
@@ -405,6 +498,7 @@
 <div id="flash"></div>
 <div id="go"><span>GO!</span></div>
 
+<div id="lightbox" data-action="photo-close"><img id="lightbox-img" alt=""><div class="cap" id="lightbox-cap"></div></div>
 <div id="backdrop"><div id="sheet"></div></div>
 <div id="toast"><span class="grow" id="toast-msg"></span><button id="toast-btn" hidden></button></div>
 
@@ -416,7 +510,7 @@
    ============================================================== */
 'use strict';
 
-const APP_VERSION = '0.5.0';   // keep in sync with CACHE_VERSION in sw.js
+const APP_VERSION = '0.9.0';   // keep in sync with CACHE_VERSION in sw.js
 
 /* ---------- helpers ---------- */
 const $  = (sel, root = document) => root.querySelector(sel);
@@ -442,6 +536,80 @@ const sum = (rows, k) => rows.reduce((a, r) => a + (+r[k] || 0), 0);
 function daysBetween(a, b) { return Math.round((parseYmd(b) - parseYmd(a)) / 86400000); }
 const blobToB64 = (blob) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
 const b64ToBlob = (dataUrl) => fetch(dataUrl).then((r) => r.blob());
+
+/* ---------- photos ----------
+   Shrink to ~1280px on the long edge and re-encode as JPEG 0.8 before storing,
+   so a 12 MP camera shot becomes ~150-300 KB instead of 3-5 MB. iOS applies
+   EXIF rotation when decoding into an <img>, so the canvas comes out upright. */
+async function shrinkImage(file, max = 1280, quality = 0.8) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image(); img.src = url; await img.decode();
+    const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.round(img.naturalWidth * scale), h = Math.round(img.naturalHeight * scale);
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    c.getContext('2d').drawImage(img, 0, 0, w, h);
+    const blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', quality));
+    return blob || file;
+  } finally { URL.revokeObjectURL(url); }
+}
+async function savePhoto(file, date, kind = 'food') {
+  const blob = await shrinkImage(file);
+  // Progress photos and anything taken on a milestone day are flagged so cleanup leaves them alone.
+  const milestone = kind === 'progress' || (await DB.byIndex('milestones', 'date', date)).length > 0;
+  // A 256px thumbnail is stored next to the full image so lists never decode a 1280px JPEG per row.
+  let thumb = null; try { thumb = await shrinkImage(blob, 256, 0.7); } catch (_) {}
+  const p = { id: uid(), date, blob, thumb, kind, milestone, size: blob.size };
+  await DB.put('photos', p); return p.id;
+}
+// Photos saved before thumbnails existed get one made the first time they're listed.
+async function ensureThumb(p) {
+  if (p.thumb || !p.blob) return p.thumb;
+  try { p.thumb = await shrinkImage(p.blob, 256, 0.7); await DB.put('photos', p); } catch (_) {}
+  return p.thumb;
+}
+function fmtDateY(ymd) { const [y, m, d] = ymd.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); }
+// Object URLs for thumbnails: created per render, revoked on the next one.
+const PhotoURLs = {
+  live: {},
+  async get(id, size = 'full') {
+    const key = size + ':' + id;
+    if (this.live[key]) return this.live[key];
+    const p = await DB.get('photos', id); if (!p || !p.blob) return null;
+    const blob = size === 'thumb' ? (await ensureThumb(p)) || p.blob : p.blob;
+    return (this.live[key] = URL.createObjectURL(blob));
+  },
+  thumb(id) { return this.get(id, 'thumb'); },
+  reset() { for (const u of Object.values(this.live)) URL.revokeObjectURL(u); this.live = {}; },
+};
+// Images fade in once decoded (see .thumb.ok etc.); a missing image still shows its placeholder.
+document.addEventListener('load', (e) => { if (e.target.tagName === 'IMG') e.target.classList.add('ok'); }, true);
+document.addEventListener('error', (e) => { if (e.target.tagName === 'IMG') e.target.classList.add('ok'); }, true);
+// Rings and bars are rendered empty and filled on the next frame so their CSS transition plays.
+function animateFills(root = document) {
+  requestAnimationFrame(() => {
+    root.querySelectorAll('.ring .fg[data-off]').forEach((el) => { el.style.strokeDashoffset = el.dataset.off; });
+    root.querySelectorAll('.bar i[data-w]').forEach((el) => { el.style.width = el.dataset.w; });
+  });
+}
+async function openLightbox(id, caption) {
+  const u = await PhotoURLs.get(id); if (!u) { toast('Photo not found'); return; }
+  $('#lightbox-img').src = u; $('#lightbox-cap').textContent = caption || ''; $('#lightbox').classList.add('show');
+}
+// Everyday food photos auto-delete after 7 days unless that day is a milestone.
+async function cleanupPhotos() {
+  const today = todayStr();
+  if ((await DB.setting('lastCleanup')) === today) return;
+  const cutoff = addDays(today, -7);
+  const keepDates = new Set((await DB.getAll('milestones')).map((m) => m.date));
+  const gone = new Set();
+  for (const p of await DB.getAll('photos')) {
+    if (p.kind === 'food' && !p.milestone && p.date < cutoff && !keepDates.has(p.date)) { await DB.delete('photos', p.id); gone.add(p.id); }
+  }
+  if (gone.size) for (const f of await DB.getAll('food')) if (f.photoId && gone.has(f.photoId)) { f.photoId = null; await DB.put('food', f); }
+  await DB.setting('lastCleanup', today);
+  if (gone.size) console.log(`[photos] cleaned up ${gone.size} old food photo(s)`);
+}
 function pop(el) { if (!el) return; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
 function shine(el) { if (!el) return; el.classList.remove('shine'); void el.offsetWidth; el.classList.add('shine'); }
 
@@ -576,7 +744,7 @@ async function loadPPL() {
 
 /* ---------- navigation ---------- */
 let current = 'home';
-const TAB_FOR = { setup: 'more', backup: 'more' };
+const TAB_FOR = { setup: 'more', backup: 'more', milestones: 'more', achievements: 'more' };
 const RENDER = {};   // screen name -> async render fn
 async function showScreen(name) {
   current = name;
@@ -595,7 +763,7 @@ $$('.tab').forEach((t) => t.addEventListener('click', () => showScreen(t.dataset
    ============================================================== */
 function ring(pct, color, big, small, label) {
   const r = 26, c = 2 * Math.PI * r, off = c * (1 - Math.min(1, Math.max(0, pct)));
-  return `<div><div class="ring"><svg viewBox="0 0 64 64"><circle class="bg" cx="32" cy="32" r="${r}"/><circle class="fg" cx="32" cy="32" r="${r}" style="stroke:${color};stroke-dasharray:${c};stroke-dashoffset:${off}"/></svg><div class="ring-txt"><b>${big}</b><small>${small}</small></div></div><div class="ring-lbl">${label}</div></div>`;
+  return `<div><div class="ring"><svg viewBox="0 0 64 64"><circle class="bg" cx="32" cy="32" r="${r}"/><circle class="fg" cx="32" cy="32" r="${r}" style="stroke:${color};stroke-dasharray:${c};stroke-dashoffset:${c}" data-off="${off}"/></svg><div class="ring-txt"><b>${big}</b><small>${small}</small></div></div><div class="ring-lbl">${label}</div></div>`;
 }
 RENDER.home = async function renderHome() {
   const today = todayStr();
@@ -609,8 +777,12 @@ RENDER.home = async function renderHome() {
   const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
   const dateLine = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
   const plan = todayPlan();
+  const [lastBackup, snooze, nFood, nWk] = await Promise.all([DB.setting('lastBackup'), DB.setting('backupSnooze'), DB.getAll('food'), DB.getAll('workouts')]);
+  // Food-logging streak: consecutive days ending today (or yesterday, if today isn't logged yet).
+  const foodDays = new Set(nFood.map((f) => f.date)); let streak = 0, d = today; if (!foodDays.has(d)) d = addDays(d, -1);
+  while (foodDays.has(d)) { streak++; d = addDays(d, -1); }
 
-  let html = `<h1>${greet}! 👋</h1><p class="muted">${dateLine}</p>`;
+  let html = `<h1>${greet}! 👋</h1><div class="row between"><p class="muted">${dateLine}</p>${streak >= 2 ? `<span class="pill streak">🔥 ${streak}-day streak</span>` : ''}</div>`;
 
   if (!S.days.length) {
     html += `<div class="card accent stack">
@@ -650,7 +822,6 @@ RENDER.home = async function renderHome() {
   html += suppCard(supps);
 
   // Backup reminder: only once there's something worth saving, and not while snoozed.
-  const [lastBackup, snooze, nFood, nWk] = await Promise.all([DB.setting('lastBackup'), DB.setting('backupSnooze'), DB.getAll('food'), DB.getAll('workouts')]);
   const sinceBackup = lastBackup ? daysBetween(lastBackup, today) : null;
   if ((nFood.length + nWk.length) > 0 && (sinceBackup == null || sinceBackup > 7) && !(snooze && snooze > today)) {
     html += `<div class="card" style="border-color:var(--yellow)" id="backup-card">
@@ -666,13 +837,14 @@ RENDER.home = async function renderHome() {
   html += `<div class="card" id="bw-card">
     <div class="row between"><h2>Morning weight ⚖️</h2>${b ? `<span class="pill ok">${b.weight} lb</span>` : lastBw ? `<span class="pill">last ${lastBw.weight} lb · ${fmtDate(lastBw.date)}</span>` : ''}</div>
     <div class="row mt">
-      <div class="unit grow"><input class="input" id="bw-input" inputmode="decimal" placeholder="${b ? b.weight : lastBw ? lastBw.weight : 'lb'}" value="${b ? b.weight : ''}"><span>lb</span></div>
+      <div class="unit grow"><input class="input" id="bw-input" inputmode="decimal" enterkeyhint="done" placeholder="${b ? b.weight : lastBw ? lastBw.weight : 'lb'}" value="${b ? b.weight : ''}"><span>lb</span></div>
       <button class="btn square" data-action="save-bw">✓</button>
       ${b ? `<button class="btn neutral square" data-action="delete-bw" data-id="${b.id}">🗑</button>` : ''}
     </div>
   </div>`;
 
   $('#scr-home').innerHTML = html;
+  animateFills($('#scr-home'));
 };
 
 async function saveBodyweight() {
@@ -685,6 +857,7 @@ async function saveBodyweight() {
   toast(`Saved ${w} lb ✓`);
   await RENDER.home();
   pop($('#bw-card'));
+  checkAchievements();
 }
 
 /* ==============================================================
@@ -728,6 +901,7 @@ async function logWater(oz, date) {
   if (oz < 0) { if (total <= 0) { toast('Nothing to take away'); return; } oz = Math.max(oz, -total); }
   await DB.put('water', { id: uid(), date, time: date === todayStr() ? timeStr() : '12:00', oz });
   await rerender(); pop($('#water-card'));
+  checkAchievements();
   toast(`${oz > 0 ? '+' : ''}${oz} oz → ${fmtNum(total + oz)} oz today`);
 }
 async function takeSupp(id) {
@@ -747,9 +921,10 @@ const rerender = () => (RENDER[current] ? RENDER[current]() : Promise.resolve())
 const F = { date: todayStr() };
 RENDER.food = async function renderFood() {
   const date = F.date, isToday = date === todayStr();
-  const [food, water, supps, all] = await Promise.all([
-    DB.byIndex('food', 'date', date), DB.byIndex('water', 'date', date), DB.byIndex('supplements', 'date', date), DB.getAll('food'),
+  const [food, water, supps, all, msDay] = await Promise.all([
+    DB.byIndex('food', 'date', date), DB.byIndex('water', 'date', date), DB.byIndex('supplements', 'date', date), DB.getAll('food'), DB.byIndex('milestones', 'date', date),
   ]);
+  const isMilestone = msDay.length > 0;
   food.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
   const cal = sum(food, 'calories'), pro = sum(food, 'protein'), oz = sum(water, 'oz');
   const left = S.calorieGoal - cal;
@@ -774,25 +949,32 @@ RENDER.food = async function renderFood() {
   html += `<div class="card">
     <div class="row between"><h2>${fmtNum(cal)} <span class="muted small">/ ${fmtNum(S.calorieGoal)} cal</span></h2>
       <span class="pill ${left < 0 ? 'bad' : ''}">${left >= 0 ? fmtNum(left) + ' left' : fmtNum(-left) + ' over'}</span></div>
-    <div class="bar ${left < 0 ? 'over' : ''}"><i style="width:${Math.min(100, cal / S.calorieGoal * 100)}%"></i></div>
+    <div class="bar ${left < 0 ? 'over' : ''}"><i style="width:0" data-w="${Math.min(100, cal / S.calorieGoal * 100)}%"></i></div>
     <div class="row between mt"><b>${fmtNum(pro)} g <span class="muted small">/ ${S.proteinGoal} g protein</span></b>
       <span class="pill ${pro >= S.proteinGoal ? 'ok' : ''}">${pro >= S.proteinGoal ? 'Protein hit ✓' : fmtNum(S.proteinGoal - pro) + ' g to go'}</span></div>
-    <div class="bar"><i style="width:${Math.min(100, pro / S.proteinGoal * 100)}%;background:var(--purple)"></i></div>
+    <div class="bar"><i style="width:0;background:var(--purple)" data-w="${Math.min(100, pro / S.proteinGoal * 100)}%"></i></div>
   </div>`;
+
+  PhotoURLs.reset();
+  const thumbs = {};
+  for (const f of food) if (f.photoId) thumbs[f.id] = await PhotoURLs.thumb(f.photoId);
+  const nPhotos = Object.values(thumbs).filter(Boolean).length;
 
   html += `<div class="card" id="food-add">
     <h2>Log food</h2>
-    <div class="field"><input class="input" id="f-food-name" placeholder="What did you eat?" autocomplete="off"></div>
+    <div class="field"><input class="input" id="f-food-name" placeholder="What did you eat?" autocomplete="off" autocapitalize="sentences" enterkeyhint="next"></div>
     <div class="row">
-      <div class="unit grow"><input class="input" id="f-food-cal" inputmode="numeric" placeholder="650"><span>cal</span></div>
-      <div class="unit grow"><input class="input" id="f-food-pro" inputmode="numeric" placeholder="optional"><span>g protein</span></div>
+      <div class="unit grow"><input class="input" id="f-food-cal" inputmode="numeric" placeholder="650" enterkeyhint="done"><span>cal</span></div>
+      <div class="unit grow"><input class="input" id="f-food-pro" inputmode="numeric" placeholder="—" style="padding-right:86px" enterkeyhint="done"><span>g protein</span></div>
     </div>
+    <label class="photo-btn mt" id="photo-pick"><input type="file" accept="image/*" id="f-food-photo"><img id="photo-preview" alt="" hidden><span id="photo-label">📷 Add a photo (optional)</span></label>
     <button class="btn mt" data-action="food-add" data-date="${date}">Add</button>
     ${recent.length ? `<div class="chips">${recent.map((r) => `<button class="chip" data-action="food-chip" data-name="${esc(r.name)}" data-cal="${r.calories ?? ''}" data-pro="${r.protein ?? ''}">${esc(r.name)} · ${fmtNum(r.calories || 0)}</button>`).join('')}</div>` : ''}
   </div>`;
 
   html += `<div class="card"><h2>${label}'s log</h2>${food.length ? `<div class="mt">${food.map((f) => `
     <div class="entry" data-action="food-edit" data-id="${f.id}">
+      ${thumbs[f.id] ? `<img class="thumb" src="${thumbs[f.id]}" alt="" data-action="photo-view" data-id="${f.photoId}" data-cap="${esc(f.name)} · ${fmtNum(f.calories)} cal">` : ''}
       <span class="t">${fmtClock(f.time)}</span><span class="n">${esc(f.name)}</span>
       ${f.protein != null ? `<span class="p">${f.protein}g</span>` : ''}<span class="c">${fmtNum(f.calories)}</span>
     </div>`).join('')}</div>` : '<p class="muted small">Nothing logged yet.</p>'}</div>`;
@@ -801,21 +983,27 @@ RENDER.food = async function renderFood() {
 
   const suppLine = S.supplements.map((s) => { const m = supps.filter((e) => e.supplementId === s.id); return m.length ? `${s.name} ${fmtNum(sum(m, 'amount'))} ${s.unit}` : null; }).filter(Boolean).join(' · ');
   html += `<div class="card">
-    <h2>Day summary 📋</h2>
+    <div class="row between"><h2>Day summary 📋</h2>${isMilestone ? '<span class="pill ms-badge" data-action="go" data-to="milestones" style="cursor:pointer">🏆 Milestone day</span>' : ''}</div>
     <p class="mt"><b>${fmtNum(cal)} cal</b> — ${left >= 0 ? `${fmtNum(left)} under goal` : `${fmtNum(-left)} over goal`} · <b>${fmtNum(pro)} g</b> protein ${pro >= S.proteinGoal ? '✓' : `(${fmtNum(S.proteinGoal - pro)} g short)`}</p>
     <p><b>${fmtNum(oz)} oz</b> water ${oz >= S.waterGoal ? '✓' : `(${fmtNum(S.waterGoal - oz)} oz short)`}${suppLine ? ` · ${suppLine}` : ''}</p>
-    <p class="muted small">${food.length} food${food.length === 1 ? '' : 's'} logged${food.length ? ` · biggest: ${esc(food.slice().sort((a, b) => b.calories - a.calories)[0].name)}` : ''}</p>
+    <p class="muted small">${food.length} food${food.length === 1 ? '' : 's'} logged${nPhotos ? ` · 📷 ${nPhotos} photo${nPhotos === 1 ? '' : 's'}` : ''}${food.length ? ` · biggest: ${esc(food.slice().sort((a, b) => b.calories - a.calories)[0].name)}` : ''}</p>
+    ${nPhotos ? `<p class="muted tiny">${isMilestone ? 'Milestone day — these food photos are kept forever.' : 'Food photos are kept 7 days, or forever on milestone days.'}</p>` : ''}
   </div>`;
 
   $('#scr-food').innerHTML = html;
+  animateFills($('#scr-food'));
 };
 async function addFood(date) {
   const name = $('#f-food-name').value.trim(), cal = num($('#f-food-cal').value), pro = num($('#f-food-pro').value);
   if (!name) { toast('What did you eat?'); $('#f-food-name').focus(); return; }
   if (cal == null) { toast('How many calories?'); $('#f-food-cal').focus(); return; }
-  await DB.put('food', { id: uid(), date, time: date === todayStr() ? timeStr() : '12:00', name, calories: Math.round(cal), protein: pro == null ? null : Math.round(pro) });
+  const file = $('#f-food-photo').files[0];
+  let photoId = null;
+  if (file) { try { photoId = await savePhoto(file, date, 'food'); } catch (err) { console.error(err); toast('Photo couldn\'t be saved, logging without it'); } }
+  await DB.put('food', { id: uid(), date, time: date === todayStr() ? timeStr() : '12:00', name, calories: Math.round(cal), protein: pro == null ? null : Math.round(pro), photoId });
   await RENDER.food(); pop($('#food-add'));
-  toast(`Logged ${name} · ${fmtNum(cal)} cal ✓`);
+  toast(`Logged ${name} · ${fmtNum(cal)} cal${photoId ? ' 📷' : ''} ✓`);
+  checkAchievements();
 }
 async function foodSheet(id) {
   const f = await DB.get('food', id); if (!f) return;
@@ -826,8 +1014,11 @@ async function foodSheet(id) {
       <div class="field grow"><label>Protein g</label><input class="input" id="e-pro" inputmode="numeric" value="${f.protein ?? ''}"></div>
     </div>
     <div class="field"><label>Time</label><input class="input" id="e-time" type="time" value="${f.time || ''}"></div>
+    ${f.photoId ? `<img class="photo-big" src="${(await PhotoURLs.get(f.photoId)) || ''}" alt="" data-action="photo-view" data-id="${f.photoId}" data-cap="${esc(f.name)}">` : ''}
+    <label class="photo-btn mt"><input type="file" accept="image/*" id="e-photo"><span>📷 ${f.photoId ? 'Replace photo' : 'Add a photo'}</span></label>
     <div class="sheet-actions">
       <button class="btn" data-action="food-save" data-id="${f.id}">Save</button>
+      ${f.photoId ? `<button class="btn neutral" data-action="food-photo-remove" data-id="${f.id}">Remove photo</button>` : ''}
       <button class="btn red" data-action="food-delete" data-id="${f.id}">Delete</button>
       <button class="btn ghost" data-action="sheet-close">Cancel</button>
     </div>`);
@@ -964,8 +1155,27 @@ RENDER.progress = async function renderProgress() {
   } else html += `<p class="muted small mt">${all.length ? 'No weigh-ins in this range.' : 'Log your morning weight on Home to start the graph.'}</p>`;
   html += `</div>`;
 
-  // 6. Milestones (Phase 6)
-  html += `<div class="card"><div class="row between"><h2>Milestones 🏆</h2><span class="pill">Phase 6</span></div><p class="muted small mt">Your progress-photo journal will live here.</p></div>`;
+  // 6. Milestone photo journal
+  const mls = await milestoneRows();
+  PhotoURLs.reset();
+  html += `<div class="card"><div class="row between"><h2>Milestones 🏆</h2>${mls.length ? `<span class="pill">${mls.length}</span>` : ''}</div>`;
+  if (!mls.length) {
+    html += `<p class="muted small mt">No progress photos yet. Mark a milestone day to start your time-lapse.</p>
+      <button class="btn yellow sm mt" data-action="go" data-to="milestones">Add first milestone</button>`;
+  } else {
+    const bwByDate = {}; for (const r of bw) bwByDate[r.date] = r.weight;
+    let strip = '';
+    for (let i = 0; i < mls.length; i++) {
+      const m = mls[i]; const u = await PhotoURLs.thumb(m.photoId);
+      strip += `<div class="mthumb" data-action="ms-open" data-i="${i}"><img src="${u || ''}" alt=""><small>${fmtDate(m.date)}${bwByDate[m.date] != null ? ` · ${bwByDate[m.date]}` : ''}</small></div>`;
+    }
+    const first = mls[0], last = mls[mls.length - 1];
+    const w0 = bwByDate[first.date], w1 = bwByDate[last.date];
+    html += `<div class="mstrip">${strip}</div>
+      <p class="muted tiny center mt">${mls.length === 1 ? 'Started ' + fmtDateY(first.date) : `${daysBetween(first.date, last.date)} days between first and latest${w0 != null && w1 != null ? ` · ${w1 - w0 > 0 ? '+' : ''}${Math.round((w1 - w0) * 10) / 10} lb` : ''}`}</p>
+      <button class="btn neutral sm" data-action="go" data-to="milestones">Open timeline</button>`;
+  }
+  html += `</div>`;
 
   $('#scr-progress').innerHTML = html;
 };
@@ -1028,7 +1238,7 @@ function exerciseCard(e) {
         <button class="btn neutral xs auto" data-action="edit-set" data-ex="${e.id}" data-set="${i}">Edit</button></div>`;
     } else {
       rows += `<div class="setrow"><span class="setno">${i + 1}</span>
-        <div class="unit grow"><input class="input sm set-input" inputmode="decimal" data-ex="${e.id}" data-set="${i}" placeholder="${target != null ? target : 'lb'}"><span>× ${e.reps}</span></div>
+        <div class="unit grow"><input class="input sm set-input" inputmode="decimal" enterkeyhint="done" data-ex="${e.id}" data-set="${i}" placeholder="${target != null ? target : 'lb'}"><span>× ${e.reps}</span></div>
         <button class="btn square sm" data-action="log-set" data-ex="${e.id}" data-set="${i}">✓</button></div>`;
     }
   }
@@ -1051,6 +1261,7 @@ async function logSet(exId, idx, raw) {
   rec.weights[idx] = w;
   await DB.put('workouts', rec);
   W.records[exId] = rec;
+  if (w != null) checkAchievements();
 
   if (w != null) {
     const last = W.last[exId];
@@ -1323,10 +1534,14 @@ function daySheet(day) {
    ============================================================== */
 RENDER.backup = async function renderBackup() {
   const last = await DB.setting('lastBackup');
+  const photos = await DB.getAll('photos');
+  const photoBytes = photos.reduce((a, p) => a + (p.size || (p.blob && p.blob.size) || 0), 0);
+  let usage = ''; try { const est = await navigator.storage.estimate(); if (est && est.usage) usage = ` · app using ${(est.usage / 1048576).toFixed(1)} MB`; } catch (_) {}
   $('#scr-backup').innerHTML = `<div class="topbar"><button class="btn neutral icon" data-action="go" data-to="more">‹</button><h1>Backup</h1></div>
+    <p class="muted small">${photos.length} photo${photos.length === 1 ? '' : 's'} (${(photoBytes / 1048576).toFixed(1)} MB)${usage}.</p>
     <div class="card stack">
       <h2>Export 📤</h2>
-      <p class="muted small">Saves everything (settings, exercises, workouts, food, water, supplements, weigh-ins) as one file. On iPhone pick <b>Save to Files</b>.</p>
+      <p class="muted small">Saves everything (settings, exercises, workouts, food, water, supplements, weigh-ins, milestones and photos) as one file. On iPhone pick <b>Save to Files</b>.</p>
       <button class="btn blue" data-action="export">Export backup</button>
       <p class="muted tiny">${last ? `Last export: ${fmtDate(last)} (${daysBetween(last, todayStr()) === 0 ? 'today' : daysBetween(last, todayStr()) + ' days ago'})` : 'No export yet.'}</p>
     </div>
@@ -1343,7 +1558,7 @@ async function exportBackup() {
   const data = {};
   for (const s of DATA_STORES) data[s] = await DB.getAll(s);
   // Photos are Blobs in IndexedDB; JSON can't hold them, so they travel as base64 data URLs.
-  data.photos = await Promise.all(data.photos.map(async (p) => { const { blob, ...rest } = p; return { ...rest, b64: blob ? await blobToB64(blob) : null }; }));
+  data.photos = await Promise.all(data.photos.map(async (p) => { const { blob, thumb, ...rest } = p; return { ...rest, b64: blob ? await blobToB64(blob) : null }; }));
   const out = { app: 'repplate', version: 2, exportedAt: new Date().toISOString(), exportedDate: todayStr(), data };
   const name = `repplate-backup-${todayStr()}.json`;
   const blob = new Blob([JSON.stringify(out)], { type: 'application/json' });
@@ -1355,7 +1570,7 @@ async function exportBackup() {
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
       document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
     }
-    await DB.setting('lastBackup', todayStr()); await DB.setting('backupSnooze', null); toast('Backup saved ✓'); rerender();
+    await DB.setting('lastBackup', todayStr()); await DB.setting('backupSnooze', null); toast('Backup saved ✓'); rerender(); checkAchievements();
   } catch (err) { if (err && err.name !== 'AbortError') toast('Export failed: ' + err.message); }
 }
 async function importBackup() {
@@ -1382,7 +1597,7 @@ async function importBackup() {
     }
   }
   await loadState(); W.dayId = null;
-  out.textContent = `✅ Imported ${n} records.`; toast('Import done 🎉');
+  out.textContent = `✅ Imported ${n} records.`; toast('Import done 🎉'); checkAchievements();
 }
 // v2 backup: rows go straight back into their stores.
 function planV2(obj) {
@@ -1445,15 +1660,274 @@ function planV1(obj) {
 }
 
 /* ==============================================================
+   MILESTONES — a day worth remembering: a progress photo plus that
+   day's food photos, kept forever (cleanupPhotos skips milestone days).
+   The timeline is a horizontal scroll-snap carousel, so swiping is
+   native; "Play" steps through it like a time-lapse.
+   ============================================================== */
+const M = { index: null, timer: null };
+async function milestoneRows() {
+  return (await DB.getAll('milestones')).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+}
+async function milestoneCtx(ms) {
+  const [bw, food] = await Promise.all([DB.getAll('bodyweight'), DB.getAll('food')]);
+  const bwByDate = {}; for (const r of bw) bwByDate[r.date] = r.weight;
+  return ms.map((m) => {
+    const f = food.filter((r) => r.date === m.date).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+    return { ...m, weight: bwByDate[m.date] ?? null, cal: sum(f, 'calories'), pro: sum(f, 'protein'), nFood: f.length,
+      foodPhotos: f.filter((r) => r.photoId).map((r) => ({ id: r.photoId, name: r.name, cal: r.calories })) };
+  });
+}
+function stopPlay() { if (M.timer) { clearInterval(M.timer); M.timer = null; } const b = $('#ms-play'); if (b) b.textContent = '▶ Play'; }
+function tlGo(i, smooth = true) {
+  const tl = $('#tl'); if (!tl || !tl.children[i]) return;
+  tl.scrollTo({ left: tl.children[i].offsetLeft, behavior: smooth ? 'smooth' : 'auto' });
+}
+function tlSync() {
+  const tl = $('#tl'); if (!tl) return;
+  let best = 0, bd = Infinity;
+  Array.from(tl.children).forEach((c, i) => { const d = Math.abs(c.offsetLeft - tl.scrollLeft); if (d < bd) { bd = d; best = i; } });
+  if (best !== M.index) { M.index = best; $$('#tl-dots i').forEach((d, k) => d.classList.toggle('on', k === best)); const c = $('#tl-count'); if (c) c.textContent = `${best + 1} / ${tl.children.length}`; }
+}
+window.addEventListener('resize', () => { if ($('#tl') && M.index != null) tlGo(M.index, false); });   // keep the slide aligned if the width changes
+function playTimeline() {
+  const tl = $('#tl'); if (!tl || tl.children.length < 2) return;
+  if (M.timer) { stopPlay(); return; }
+  let i = (M.index == null || M.index >= tl.children.length - 1) ? 0 : M.index;
+  tlGo(i, false); $('#ms-play').textContent = '⏸ Stop';
+  M.timer = setInterval(() => { i++; tlGo(i); if (i >= tl.children.length - 1) stopPlay(); }, 900);
+}
+RENDER.milestones = async function renderMilestones() {
+  stopPlay();
+  const today = todayStr();
+  const ms = await milestoneCtx(await milestoneRows());
+  PhotoURLs.reset();
+  const todayMs = ms.find((m) => m.date === today);
+  const bwToday = (await DB.byIndex('bodyweight', 'date', today))[0];
+
+  let html = `<div class="topbar"><button class="btn neutral icon" data-action="go" data-to="more">‹</button><h1>Milestones 🏆</h1></div>`;
+
+  html += `<div class="card accent" id="ms-add">
+    <h2>${todayMs ? 'Today is a milestone ✓' : 'Mark a milestone'}</h2>
+    <p class="muted small">A progress photo plus that day's food photos, kept forever. Same spot, same light, same time of day makes the time-lapse work.</p>
+    <div class="row">
+      <div class="field grow" style="margin:8px 0"><label>Day</label><input class="input" id="m-date" type="date" value="${today}" max="${today}"></div>
+      <div class="field grow" style="margin:8px 0"><label>Weight (optional)</label><div class="unit"><input class="input" id="m-weight" inputmode="decimal" enterkeyhint="done" placeholder="—" value="${bwToday ? bwToday.weight : ''}"><span>lb</span></div></div>
+    </div>
+    <label class="photo-btn" id="m-pick"><input type="file" accept="image/*" id="m-photo"><img id="m-preview" alt="" hidden><span id="m-label">📷 ${todayMs ? 'Replace today\'s progress photo' : 'Progress photo'}</span></label>
+    <button class="btn mt" data-action="ms-save">${todayMs ? 'Update milestone' : 'Save milestone'}</button>
+  </div>`;
+
+  if (!ms.length) {
+    html += `<div class="card"><h2>Your timeline</h2><p class="muted small mt">No milestones yet. Add the first one above — future you will want to see where this started.</p></div>`;
+  } else {
+    const urls = {};
+    for (const m of ms) { urls[m.id] = await PhotoURLs.get(m.photoId); for (const p of m.foodPhotos) urls[p.id] = await PhotoURLs.thumb(p.id); }
+    const slides = ms.map((m, i) => {
+      const prev = i ? ms[i - 1] : null;
+      const d = (m.weight != null && prev && prev.weight != null) ? Math.round((m.weight - prev.weight) * 10) / 10 : null;
+      const cap = `${fmtDateY(m.date)}${m.weight != null ? ' · ' + m.weight + ' lb' : ''}`;
+      return `<div class="tl-slide">
+        <img class="tl-photo" src="${urls[m.id] || ''}" alt="" data-action="photo-view" data-id="${m.photoId}" data-cap="${cap}">
+        <div class="row between mt"><b>#${i + 1} · ${fmtDateY(m.date)}</b>${m.weight != null ? `<span class="pill ${d != null && d < 0 ? 'ok' : ''}">${m.weight} lb${d != null ? ` · ${d > 0 ? '+' : ''}${d}` : ''}</span>` : '<span class="pill">no weigh-in</span>'}</div>
+        <p class="muted tiny">${i ? `${daysBetween(prev.date, m.date)} days after #${i}` : 'Where it started'} · ${m.nFood ? `${fmtNum(m.cal)} cal · ${fmtNum(m.pro)} g protein` : 'no food logged'}</p>
+        ${m.foodPhotos.length ? `<div class="strip">${m.foodPhotos.map((p) => `<img src="${urls[p.id] || ''}" alt="" data-action="photo-view" data-id="${p.id}" data-cap="${esc(p.name)} · ${fmtNum(p.cal)} cal">`).join('')}</div>` : '<p class="muted tiny">No food photos that day.</p>'}
+        <button class="btn neutral xs auto" data-action="ms-edit" data-id="${m.id}">Edit</button>
+      </div>`;
+    });
+    html += `<div class="card">
+      <div class="row between"><h2>Your timeline</h2><button class="btn blue xs auto" id="ms-play" data-action="ms-play" ${ms.length > 1 ? '' : 'disabled'}>▶ Play</button></div>
+      <p class="muted tiny">${ms.length > 1 ? 'Swipe, or play it like a time-lapse.' : 'Swipe once you have more than one.'} <span id="tl-count">${ms.length} / ${ms.length}</span></p>
+      <div class="tl" id="tl">${slides.join('')}</div>
+      <div class="tl-dots" id="tl-dots">${ms.map(() => '<i></i>').join('')}</div>
+    </div>`;
+    if (ms.length > 1) {
+      const a = ms[0], b = ms[ms.length - 1];
+      const dw = (a.weight != null && b.weight != null) ? Math.round((b.weight - a.weight) * 10) / 10 : null;
+      html += `<div class="card"><h2>First vs now</h2>
+        <div class="compare">
+          <div><img src="${urls[a.id] || ''}" alt="" data-action="photo-view" data-id="${a.photoId}" data-cap="${fmtDateY(a.date)}"><small>${fmtDateY(a.date)}${a.weight != null ? ` · ${a.weight} lb` : ''}</small></div>
+          <div><img src="${urls[b.id] || ''}" alt="" data-action="photo-view" data-id="${b.photoId}" data-cap="${fmtDateY(b.date)}"><small>${fmtDateY(b.date)}${b.weight != null ? ` · ${b.weight} lb` : ''}</small></div>
+        </div>
+        <p class="muted tiny center mt">${daysBetween(a.date, b.date)} days · ${ms.length} milestones${dw != null ? ` · ${dw > 0 ? '+' : ''}${dw} lb` : ''}</p>
+      </div>`;
+    }
+  }
+
+  $('#scr-milestones').innerHTML = html;
+
+  const tl = $('#tl');
+  if (tl) {
+    tl.addEventListener('scroll', tlSync, { passive: true });
+    tl.addEventListener('touchstart', stopPlay, { passive: true });
+    const start = (M.index != null && M.index < ms.length) ? M.index : ms.length - 1;
+    M.index = null;
+    requestAnimationFrame(() => { tlGo(start, false); tlSync(); });
+  }
+};
+async function flagDayPhotos(date, on) {
+  for (const p of await DB.byIndex('photos', 'date', date)) if (p.kind === 'food' && !!p.milestone !== on) { p.milestone = on; await DB.put('photos', p); }
+}
+async function saveMilestone() {
+  const today = todayStr();
+  let date = $('#m-date').value || today; if (date > today) date = today;
+  const file = $('#m-photo').files[0];
+  const w = num($('#m-weight').value);
+  const existing = (await DB.byIndex('milestones', 'date', date))[0];
+  if (!file && !existing) { toast('Add a progress photo first'); return; }
+  let photoId = existing ? existing.photoId : null;
+  if (file) {
+    try { const fresh = await savePhoto(file, date, 'progress'); if (photoId) await DB.delete('photos', photoId); photoId = fresh; }
+    catch (err) { console.error(err); toast('Photo couldn\'t be saved'); return; }
+  }
+  const m = existing || { id: uid(), date, createdAt: new Date().toISOString() };
+  m.photoId = photoId; await DB.put('milestones', m);
+  if (w != null) { const cur = (await DB.byIndex('bodyweight', 'date', date))[0]; await DB.put('bodyweight', { id: cur ? cur.id : uid(), date, weight: Math.round(w * 10) / 10 }); }
+  await flagDayPhotos(date, true);
+  M.index = null;
+  await RENDER.milestones(); shine($('#ms-add'));
+  toast(existing ? 'Milestone updated ✓' : 'Milestone saved 🏆');
+  checkAchievements();
+}
+async function milestoneSheet(id) {
+  const m = await DB.get('milestones', id); if (!m) return;
+  openSheet(`<h2>Milestone · ${fmtDateY(m.date)}</h2>
+    <img class="photo-big" src="${(await PhotoURLs.get(m.photoId)) || ''}" alt="" data-action="photo-view" data-id="${m.photoId}" data-cap="${fmtDateY(m.date)}">
+    <label class="photo-btn mt"><input type="file" accept="image/*" id="e-mphoto"><span>📷 Replace photo</span></label>
+    <div class="sheet-actions">
+      <button class="btn" data-action="ms-sheet-save" data-id="${m.id}">Save</button>
+      <button class="btn red" data-action="ms-delete" data-id="${m.id}">Remove milestone</button>
+      <button class="btn ghost" data-action="sheet-close">Cancel</button>
+    </div>`);
+}
+async function deleteMilestone(id) {
+  const m = await DB.get('milestones', id); if (!m) return;
+  if (!(await ask(`Remove the ${fmtDateY(m.date)} milestone? Its progress photo is deleted, and that day's food photos go back to the normal 7-day rule.`, 'Remove'))) return;
+  if (m.photoId) await DB.delete('photos', m.photoId);
+  await DB.delete('milestones', id);
+  if (!(await DB.byIndex('milestones', 'date', m.date)).length) await flagDayPhotos(m.date, false);
+  closeSheet(); M.index = null; toast('Milestone removed'); rerender();
+}
+
+/* ==============================================================
+   ACHIEVEMENTS — badges unlock automatically. checkAchievements()
+   runs after anything that could earn one (set, food, water, weigh-in,
+   milestone, backup) and once at boot, rebuilds a small stats context
+   from the stores, and shows a Duolingo-style unlock card for new ones.
+   ============================================================== */
+const BADGES = [
+  { id: 'first-set',    icon: '🏁', name: 'First rep',          hint: 'Log your first set.',                       check: (c) => c.sets > 0 },
+  { id: 'workouts-10',  icon: '🔟', name: 'Ten sessions',       hint: 'Log sets on 10 different days.',            check: (c) => c.workoutDays >= 10, prog: (c) => [c.workoutDays, 10] },
+  { id: 'workouts-50',  icon: '🏟️', name: 'Fifty sessions',     hint: 'Log sets on 50 different days.',            check: (c) => c.workoutDays >= 50, prog: (c) => [c.workoutDays, 50] },
+  { id: 'first-pr',     icon: '📈', name: 'First PR',           hint: 'Beat your previous best on any exercise.',  check: (c) => c.prs > 0 },
+  { id: 'pr-10',        icon: '🚀', name: 'PR machine',         hint: 'Set 10 personal records.',                  check: (c) => c.prs >= 10, prog: (c) => [c.prs, 10] },
+  { id: 'lift-135',     icon: '🥉', name: 'One plate',          hint: 'Lift 135 lb on any exercise.',              check: (c) => c.maxLift >= 135, prog: (c) => [c.maxLift, 135] },
+  { id: 'lift-225',     icon: '🥈', name: 'Two plates',         hint: 'Lift 225 lb on any exercise.',              check: (c) => c.maxLift >= 225, prog: (c) => [c.maxLift, 225] },
+  { id: 'lift-315',     icon: '🥇', name: 'Three plates',       hint: 'Lift 315 lb on any exercise.',              check: (c) => c.maxLift >= 315, prog: (c) => [c.maxLift, 315] },
+  { id: 'bench-bw',     icon: '💪', name: 'Benched bodyweight', hint: 'Bench press your own bodyweight.',          check: (c) => c.benchBw },
+  { id: 'food-1',       icon: '🍗', name: 'First bite',         hint: 'Log your first food.',                      check: (c) => c.foodDays >= 1 },
+  { id: 'log-7',        icon: '📅', name: 'Week of logging',    hint: 'Log food on 7 different days.',             check: (c) => c.foodDays >= 7, prog: (c) => [c.foodDays, 7] },
+  { id: 'streak-7',     icon: '🔥', name: '7-day streak',       hint: 'Log food 7 days in a row.',                 check: (c) => c.foodStreak >= 7, prog: (c) => [c.foodStreak, 7] },
+  { id: 'streak-30',    icon: '🌋', name: '30-day streak',      hint: 'Log food 30 days in a row.',                check: (c) => c.foodStreak >= 30, prog: (c) => [c.foodStreak, 30] },
+  { id: 'protein-goal', icon: '🥩', name: 'Protein hit',        hint: 'Reach your protein goal in a day.',         check: (c) => c.proteinHit },
+  { id: 'water-goal',   icon: '💧', name: 'Hydrated',           hint: 'Reach your water goal in a day.',           check: (c) => c.waterHit },
+  { id: 'photo-1',      icon: '📷', name: 'Food paparazzi',     hint: 'Add a photo to a food entry.',              check: (c) => c.foodPhotos > 0 },
+  { id: 'weigh-7',      icon: '⚖️', name: 'Scale regular',      hint: 'Log 7 morning weigh-ins.',                  check: (c) => c.weighIns >= 7, prog: (c) => [c.weighIns, 7] },
+  { id: 'milestone-1',  icon: '🏆', name: 'Snapshot',           hint: 'Save your first milestone photo.',          check: (c) => c.milestones >= 1 },
+  { id: 'milestone-5',  icon: '🎞️', name: 'Time-lapse',         hint: 'Save 5 milestones.',                        check: (c) => c.milestones >= 5, prog: (c) => [c.milestones, 5] },
+  { id: 'backup-1',     icon: '💾', name: 'Safe and sound',     hint: 'Export your first backup.',                 check: (c) => c.backedUp },
+];
+async function achievementCtx() {
+  const [workouts, food, water, bw, ms, lastBackup] = await Promise.all([
+    DB.getAll('workouts'), DB.getAll('food'), DB.getAll('water'), DB.getAll('bodyweight'), DB.getAll('milestones'), DB.setting('lastBackup'),
+  ]);
+  const c = { sets: 0, workoutDays: 0, prs: 0, maxLift: 0, benchBw: false, foodDays: 0, foodStreak: 0, proteinHit: false, waterHit: false, foodPhotos: 0, weighIns: bw.length, milestones: ms.length, backedUp: !!lastBackup };
+  const days = new Set(), byEx = {};
+  for (const w of workouts) {
+    const ws = (w.weights || []).filter((x) => x != null); if (!ws.length) continue;
+    c.sets += ws.length; days.add(w.date);
+    const top = Math.max(...ws); c.maxLift = Math.max(c.maxLift, top);
+    (byEx[w.exerciseId] = byEx[w.exerciseId] || []).push({ date: w.date, top });
+  }
+  c.workoutDays = days.size;
+  for (const rows of Object.values(byEx)) {   // a PR = a day whose top set beats every earlier day on that exercise
+    rows.sort((a, b) => (a.date < b.date ? -1 : 1)); let best = null;
+    for (const r of rows) { if (best != null && r.top > best) c.prs++; if (best == null || r.top > best) best = r.top; }
+  }
+  const bwSorted = bw.slice().sort((a, b) => (a.date < b.date ? -1 : 1));
+  const bwOn = (date) => { let v = null; for (const r of bwSorted) { if (r.date <= date) v = r.weight; else break; } return v; };
+  const benchIds = new Set(EX.filter((e) => /bench/i.test(e.name)).map((e) => e.id));
+  for (const [exId, rows] of Object.entries(byEx)) if (benchIds.has(exId)) for (const r of rows) { const b = bwOn(r.date); if (b && r.top >= b) c.benchBw = true; }
+  const foodDays = new Set(), proByDay = {};
+  for (const f of food) { foodDays.add(f.date); proByDay[f.date] = (proByDay[f.date] || 0) + (+f.protein || 0); if (f.photoId) c.foodPhotos++; }
+  c.foodDays = foodDays.size;
+  c.proteinHit = Object.values(proByDay).some((p) => p >= S.proteinGoal);
+  const ozByDay = {}; for (const w of water) ozByDay[w.date] = (ozByDay[w.date] || 0) + (+w.oz || 0);
+  c.waterHit = Object.values(ozByDay).some((o) => o >= S.waterGoal);
+  let d = todayStr(); if (!foodDays.has(d)) d = addDays(d, -1);   // a streak may still be alive if today isn't logged yet
+  while (foodDays.has(d)) { c.foodStreak++; d = addDays(d, -1); }
+  return c;
+}
+const ACH = { queue: [], busy: false };
+async function checkAchievements() {
+  if (ACH.busy) return; ACH.busy = true;
+  try {
+    const have = new Set((await DB.getAll('achievements')).map((a) => a.id));
+    const c = await achievementCtx();
+    const fresh = BADGES.filter((b) => !have.has(b.id) && b.check(c));
+    for (const b of fresh) { await DB.put('achievements', { id: b.id, date: todayStr(), unlockedAt: new Date().toISOString() }); ACH.queue.push(b); }
+    if (fresh.length) { if (current === 'more' || current === 'achievements') rerender(); showUnlock(); }
+  } catch (err) { console.error(err); } finally { ACH.busy = false; }
+}
+function showUnlock() {
+  if (!ACH.queue.length || $('#unlock').classList.contains('show')) return;
+  const list = ACH.queue.splice(0), b = list[0];
+  $('#unlock-title').textContent = list.length > 1 ? `${list.length} achievements unlocked!` : 'Achievement unlocked!';
+  $('#unlock-icon').textContent = b.icon; $('#unlock-name').textContent = b.name; $('#unlock-hint').textContent = b.hint;
+  $('#unlock-more').innerHTML = list.slice(1).map((x) => `<span class="pill">${x.icon} ${esc(x.name)}</span>`).join('');
+  const host = $('#unlock-confetti'); host.innerHTML = '';
+  const colors = ['var(--green)', 'var(--blue)', 'var(--orange)', 'var(--red)', 'var(--purple)', 'var(--yellow)'];
+  for (let i = 0; i < 30; i++) { const s = document.createElement('i'); s.style.cssText = `left:${Math.random() * 100}%;background:${colors[i % 6]};animation-delay:${(Math.random() * 0.7).toFixed(2)}s;animation-duration:${(1.5 + Math.random()).toFixed(2)}s`; host.appendChild(s); }
+  // Restart the CSS animations even if the card was shown moments ago.
+  const card = $('#unlock .unlock-card'); card.style.animation = 'none'; void card.offsetWidth; card.style.animation = '';
+  const badge = $('#unlock-icon'); badge.style.animation = 'none'; void badge.offsetWidth; badge.style.animation = '';
+  $('#unlock').classList.add('show');
+  try { if (navigator.vibrate && navigator.userActivation && navigator.userActivation.hasBeenActive) navigator.vibrate([30, 40, 60]); } catch (_) {}
+}
+RENDER.achievements = async function renderAchievements() {
+  const have = {}; for (const a of await DB.getAll('achievements')) have[a.id] = a;
+  const n = BADGES.filter((b) => have[b.id]).length;
+  $('#scr-achievements').innerHTML = `<div class="topbar"><button class="btn neutral icon" data-action="go" data-to="more">‹</button><h1>Achievements 🎖️</h1></div>
+    <div class="card">
+      <div class="row between"><h2>${n} of ${BADGES.length} unlocked</h2><span class="pill ${n ? 'ok' : ''}">${Math.round(n / BADGES.length * 100)}%</span></div>
+      <div class="bar"><i style="width:0;background:var(--yellow)" data-w="${n / BADGES.length * 100}%"></i></div>
+      <p class="muted tiny">${n === BADGES.length ? 'You got them all. 🤯' : 'They unlock on their own as you log. Tap one to see how close you are.'}</p>
+    </div>
+    <div class="badges">${BADGES.map((b) => { const a = have[b.id]; return `<button class="badge ${a ? 'on' : ''}" data-action="badge" data-id="${b.id}">
+      <span class="bicon">${b.icon}</span><span class="bname">${esc(b.name)}</span><span class="bsub">${a ? fmtDate(a.date) : 'Locked'}</span></button>`; }).join('')}</div>`;
+  animateFills($('#scr-achievements'));
+};
+async function badgeSheet(id) {
+  const b = BADGES.find((x) => x.id === id); if (!b) return;
+  const a = await DB.get('achievements', id);
+  let progress = '';
+  if (!a && b.prog) { const [cur, target] = b.prog(await achievementCtx()); progress = `<div class="bar"><i style="width:${Math.min(100, cur / target * 100)}%;background:var(--yellow)"></i></div><p class="muted tiny">${fmtNum(cur)} / ${fmtNum(target)}</p>`; }
+  openSheet(`<div class="center"><span class="bicon big ${a ? 'on' : ''}">${b.icon}</span><h2 class="mt">${esc(b.name)}</h2><p class="muted small">${esc(b.hint)}</p>
+    ${a ? `<span class="pill ok">Unlocked ${fmtDateY(a.date)}</span>` : progress || '<span class="pill">Locked</span>'}</div>
+    <div class="sheet-actions"><button class="btn neutral" data-action="sheet-close">Close</button></div>`);
+}
+
+/* ==============================================================
    MORE
    ============================================================== */
 RENDER.more = async function renderMore() {
+  const nAch = (await DB.getAll('achievements')).filter((a) => BADGES.some((b) => b.id === a.id)).length;
   const item = (ico, title, sub, to, soon) => `<button class="menu-btn" ${to ? `data-action="go" data-to="${to}"` : 'disabled style="opacity:.55"'}>
     <span class="ico">${ico}</span><span class="grow">${title}<span class="sub">${sub}</span></span><span class="chev">${soon ? '<span class="pill">soon</span>' : '›'}</span></button>`;
   $('#scr-more').innerHTML = `<h1>More</h1>
     ${item('⚙️', 'Setup', 'Goals, exercises, split, rest timer', 'setup')}
-    ${item('🏆', 'Milestones', 'Progress photos, kept forever', null, true)}
-    ${item('🎖️', 'Achievements', 'Badges you\'ve unlocked', null, true)}
+    ${item('🏆', 'Milestones', 'Progress photos + time-lapse, kept forever', 'milestones')}
+    ${item('🎖️', 'Achievements', `${nAch} of ${BADGES.length} badges unlocked`, 'achievements')}
     ${item('💾', 'Backup', 'Export / import your data', 'backup')}
     <div class="card mt">
       <div class="row between"><h2>App</h2><span class="pill">v${APP_VERSION}</span></div>
@@ -1599,10 +2073,31 @@ const ACTIONS = {
     const name = $('#e-name').value.trim(), cal = num($('#e-cal').value), pro = num($('#e-pro').value);
     if (!name || cal == null) { toast('Name and calories are required'); return; }
     Object.assign(f, { name, calories: Math.round(cal), protein: pro == null ? null : Math.round(pro), time: $('#e-time').value || f.time });
-    await DB.put('food', f); closeSheet(); toast('Saved ✓'); rerender();
+    const file = $('#e-photo') && $('#e-photo').files[0];
+    if (file) { try { if (f.photoId) await DB.delete('photos', f.photoId); f.photoId = await savePhoto(file, f.date, 'food'); } catch (err) { console.error(err); toast('Photo couldn\'t be saved'); } }
+    await DB.put('food', f); closeSheet(); toast('Saved ✓'); rerender(); checkAchievements();
   },
-  'food-delete': async (el) => { await DB.delete('food', el.dataset.id); closeSheet(); toast('Deleted'); rerender(); },
+  'food-delete': async (el) => { const f = await DB.get('food', el.dataset.id); if (f && f.photoId) await DB.delete('photos', f.photoId); await DB.delete('food', el.dataset.id); closeSheet(); toast('Deleted'); rerender(); },
+  'food-photo-remove': async (el) => { const f = await DB.get('food', el.dataset.id); if (!f) return; if (f.photoId) await DB.delete('photos', f.photoId); f.photoId = null; await DB.put('food', f); closeSheet(); toast('Photo removed'); rerender(); },
+  'photo-view': (el, e) => { e.stopPropagation(); openLightbox(el.dataset.id, el.dataset.cap); },
+  'photo-close': () => { $('#lightbox').classList.remove('show'); $('#lightbox-img').src = ''; },
   'bw-range': (el) => { P.range = Number(el.dataset.n); RENDER.progress(); },
+  'ms-save': () => saveMilestone(),
+  'ach-close': () => { $('#unlock').classList.remove('show'); showUnlock(); },
+  badge: (el) => badgeSheet(el.dataset.id),
+  'ms-play': () => playTimeline(),
+  'ms-open': (el) => { M.index = Number(el.dataset.i); showScreen('milestones'); },
+  'ms-edit': (el) => milestoneSheet(el.dataset.id),
+  'ms-delete': (el) => deleteMilestone(el.dataset.id),
+  'ms-sheet-save': async (el) => {
+    const m = await DB.get('milestones', el.dataset.id); if (!m) return;
+    const file = $('#e-mphoto').files[0];
+    if (file) {
+      try { const fresh = await savePhoto(file, m.date, 'progress'); if (m.photoId) await DB.delete('photos', m.photoId); m.photoId = fresh; await DB.put('milestones', m); }
+      catch (err) { console.error(err); toast('Photo couldn\'t be saved'); return; }
+    }
+    closeSheet(); toast('Saved ✓'); rerender();
+  },
   'backup-snooze': async () => { await DB.setting('backupSnooze', addDays(todayStr(), 3)); toast('OK — I\'ll remind you in 3 days'); RENDER.home(); },
   'add-supp': () => suppSheet(null),
   'edit-supp': (el) => suppSheet(S.supplements.find((s) => s.id === el.dataset.id)),
@@ -1635,13 +2130,44 @@ const ACTIONS = {
     } catch (err) { out.textContent = '❌ ' + (err && err.message ? err.message : err); }
   },
 };
+let lastErrToast = 0;
+function reportError(err) {
+  console.error(err);
+  const now = Date.now(); if (now - lastErrToast < 4000) return; lastErrToast = now;
+  const msg = err && err.message ? err.message : String(err || 'Unknown error');
+  toast('Something went wrong: ' + msg.slice(0, 80));
+}
+window.addEventListener('error', (e) => reportError(e.error || e.message));
+window.addEventListener('unhandledrejection', (e) => reportError(e.reason));
 document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-action]'); if (!el || el.disabled) return;
   const fn = ACTIONS[el.dataset.action]; if (!fn) return;
   e.preventDefault();
-  Promise.resolve(fn(el, e)).catch((err) => console.error(err));
+  Promise.resolve(fn(el, e)).catch(reportError);
 });
 document.addEventListener('change', async (e) => {
+  if (e.target.id === 'f-food-photo') {
+    const f = e.target.files[0], img = $('#photo-preview'), lbl = $('#photo-label');
+    if (f) { img.src = URL.createObjectURL(f); img.hidden = false; lbl.textContent = `📷 ${Math.round(f.size / 1024)} KB · tap to change`; }
+    else { img.hidden = true; lbl.textContent = '📷 Add a photo (optional)'; }
+    return;
+  }
+  if (e.target.id === 'm-photo') {
+    const f = e.target.files[0], img = $('#m-preview'), lbl = $('#m-label');
+    if (f) { img.src = URL.createObjectURL(f); img.hidden = false; lbl.textContent = `📷 ${Math.round(f.size / 1024)} KB · tap to change`; }
+    else { img.hidden = true; lbl.textContent = '📷 Progress photo'; }
+    return;
+  }
+  if (e.target.id === 'm-date') {   // picking another day: show that day's weigh-in, and whether it's already a milestone
+    const date = e.target.value; if (!date) return;
+    const [bw, ms] = await Promise.all([DB.byIndex('bodyweight', 'date', date), DB.byIndex('milestones', 'date', date)]);
+    $('#m-weight').value = bw[0] ? bw[0].weight : '';
+    const h = $('#ms-add h2'), btn = $('#ms-add .btn'), lbl = $('#m-label');
+    if (h) h.textContent = ms.length ? `${fmtDate(date)} is a milestone ✓` : 'Mark a milestone';
+    if (btn) btn.textContent = ms.length ? 'Update milestone' : 'Save milestone';
+    if (lbl && $('#m-preview').hidden) lbl.textContent = ms.length ? '📷 Replace progress photo' : '📷 Progress photo';
+    return;
+  }
   const el = e.target.closest('[data-change]'); if (!el) return;
   if (el.dataset.change === 'setting') { S[el.dataset.key] = el.checked; await saveS(el.dataset.key); toast('Saved ✓'); }
   if (el.dataset.change === 'split') { S.split[el.dataset.dow] = el.value; await saveS('split'); W.dayId = null; }
@@ -1672,7 +2198,9 @@ document.addEventListener('keydown', (e) => {
   try { const t = sessionStorage.getItem('tab'); if (t && $(`[data-screen="${t}"]`)) start = t; } catch (_) {}
   await showScreen(start);
   await restoreRest();
+  cleanupPhotos().catch(() => {});
   registerSW();
+  setTimeout(checkAchievements, 1500);   // catch up on anything earned while the app was closed / after an import
 })();
 </script>
 </body>
