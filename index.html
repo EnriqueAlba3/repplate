@@ -306,6 +306,31 @@
     .menu-btn .chev { color: var(--text-2); }
     .split-row { display: grid; grid-template-columns: 56px 1fr; align-items: center; gap: 10px; margin: 8px 0; }
     .split-row b { font-size: 15px; }
+
+    /* ============================================================
+       FOOD / WATER / SUPPLEMENTS
+       ============================================================ */
+    .bar { height: 14px; border-radius: 999px; background: var(--bg-3); overflow: hidden; margin: 6px 0 2px; }
+    .bar i { display: block; height: 100%; border-radius: 999px; background: var(--orange); transition: width .4s ease; }
+    .bar.over i { background: var(--red); }
+    .entry { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 2px solid var(--line); cursor: pointer; }
+    .entry:first-child { border-top: 0; }
+    .entry .t { width: 62px; flex: none; font-size: 13px; font-weight: 800; color: var(--text-2); }
+    .entry .n { flex: 1; min-width: 0; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .entry .c { font-weight: 800; white-space: nowrap; }
+    .entry .p { font-size: 12px; color: var(--purple); font-weight: 800; white-space: nowrap; }
+    .x { border: 0; background: var(--bg-3); color: var(--text-2); width: 30px; height: 30px; border-radius: 50%; font: inherit; font-weight: 900; flex: none; }
+    .x:active { transform: scale(.9); background: var(--bad-bg); color: var(--bad-fg); }
+    details summary { list-style: none; cursor: pointer; font-weight: 800; font-size: 13px; color: var(--text-2); padding: 6px 0; }
+    details summary::-webkit-details-marker { display: none; }
+    details summary:before { content: '▸ '; } details[open] summary:before { content: '▾ '; }
+    .supp-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+    .supp-row .unit { width: 118px; flex: none; }
+    .tagrow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .tag { display: inline-flex; align-items: center; gap: 6px; background: var(--bg-3); border-radius: 999px; padding: 4px 6px 4px 10px; font-size: 13px; font-weight: 800; }
+    .tag button { border: 0; background: var(--line); color: var(--text-2); width: 22px; height: 22px; border-radius: 50%; font: inherit; font-weight: 900; font-size: 12px; }
+    .daynav { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .daynav h1 { flex: 1; text-align: center; font-size: 22px; }
   </style>
 </head>
 <body>
@@ -313,10 +338,7 @@
 <div id="app">
   <section class="screen active" data-screen="home" id="scr-home"></section>
   <section class="screen" data-screen="workout" id="scr-workout"></section>
-  <section class="screen" data-screen="food" id="scr-food">
-    <h1>Food 🍗</h1>
-    <div class="card"><p class="muted">Coming in Phase 2: food log with calories + protein, water quick-add, supplements.</p></div>
-  </section>
+  <section class="screen" data-screen="food" id="scr-food"></section>
   <section class="screen" data-screen="progress" id="scr-progress">
     <h1>Progress 📈</h1>
     <div class="card"><p class="muted">Coming in Phase 3: weekly calories vs goal, trends, lift trends, bodyweight line graph.</p></div>
@@ -369,7 +391,7 @@
    ============================================================== */
 'use strict';
 
-const APP_VERSION = '0.2.1';   // keep in sync with CACHE_VERSION in sw.js
+const APP_VERSION = '0.3.0';   // keep in sync with CACHE_VERSION in sw.js
 
 /* ---------- helpers ---------- */
 const $  = (sel, root = document) => root.querySelector(sel);
@@ -388,6 +410,10 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<'
 const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
 const fmtTime = (s) => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 function fmtDate(ymd) { const [y, m, d] = ymd.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+function fmtClock(hhmm) { if (!hhmm) return ''; const [h, m] = hhmm.split(':').map(Number); const ap = h >= 12 ? 'PM' : 'AM'; return `${((h + 11) % 12) + 1}:${pad2(m)} ${ap}`; }
+function addDays(ymd, n) { const [y, m, d] = ymd.split('-').map(Number); return todayStr(new Date(y, m - 1, d + n)); }
+const fmtNum = (n) => Math.round(n).toLocaleString();
+const sum = (rows, k) => rows.reduce((a, r) => a + (+r[k] || 0), 0);
 function pop(el) { if (!el) return; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
 function shine(el) { if (!el) return; el.classList.remove('shine'); void el.offsetWidth; el.classList.add('shine'); }
 
@@ -545,13 +571,11 @@ function ring(pct, color, big, small, label) {
 }
 RENDER.home = async function renderHome() {
   const today = todayStr();
-  const [bw, food, water, wk] = await Promise.all([
+  const [bw, food, water, wk, supps] = await Promise.all([
     DB.byIndex('bodyweight', 'date', today), DB.byIndex('food', 'date', today),
-    DB.byIndex('water', 'date', today), DB.byIndex('workouts', 'date', today),
+    DB.byIndex('water', 'date', today), DB.byIndex('workouts', 'date', today), DB.byIndex('supplements', 'date', today),
   ]);
-  const cal = food.reduce((a, f) => a + (f.calories || 0), 0);
-  const pro = food.reduce((a, f) => a + (f.protein || 0), 0);
-  const oz  = water.reduce((a, w) => a + (w.oz || 0), 0);
+  const cal = sum(food, 'calories'), pro = sum(food, 'protein'), oz = sum(water, 'oz');
   const setsLogged = wk.reduce((a, w) => a + (w.weights || []).filter((x) => x != null).length, 0);
   const h = new Date().getHours();
   const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
@@ -585,20 +609,25 @@ RENDER.home = async function renderHome() {
     </div>`;
   }
 
-  html += `<div class="card">
+  html += `<div class="card" data-action="go" data-to="food" style="cursor:pointer">
     <div class="rings">
-      ${ring(cal / S.calorieGoal, 'var(--orange)', cal, `/ ${S.calorieGoal}`, 'Calories')}
-      ${ring(pro / S.proteinGoal, 'var(--purple)', pro + 'g', `/ ${S.proteinGoal}g`, 'Protein')}
-      ${ring(oz / S.waterGoal, 'var(--blue)', oz, `/ ${S.waterGoal} oz`, 'Water')}
+      ${ring(cal / S.calorieGoal, 'var(--orange)', fmtNum(cal), `/ ${fmtNum(S.calorieGoal)}`, 'Calories')}
+      ${ring(pro / S.proteinGoal, 'var(--purple)', fmtNum(pro) + 'g', `/ ${S.proteinGoal}g`, 'Protein')}
+      ${ring(oz / S.waterGoal, 'var(--blue)', fmtNum(oz), `/ ${S.waterGoal} oz`, 'Water')}
     </div>
-    <p class="muted tiny center mt">Food, water and supplements logging arrive in Phase 2.</p>
+    <p class="muted tiny center mt">${food.length ? `${food.length} food${food.length === 1 ? '' : 's'} logged · tap to open Food` : 'Nothing eaten yet · tap to log food'}</p>
   </div>`;
 
+  html += waterCard(water, today);
+  html += suppCard(supps);
+
   const b = bw[0];
+  const allBw = (await DB.getAll('bodyweight')).filter((r) => r.date < today).sort((x, y) => (x.date < y.date ? 1 : -1));
+  const lastBw = allBw[0];
   html += `<div class="card" id="bw-card">
-    <div class="row between"><h2>Morning weight ⚖️</h2>${b ? `<span class="pill ok">${b.weight} lb</span>` : ''}</div>
+    <div class="row between"><h2>Morning weight ⚖️</h2>${b ? `<span class="pill ok">${b.weight} lb</span>` : lastBw ? `<span class="pill">last ${lastBw.weight} lb · ${fmtDate(lastBw.date)}</span>` : ''}</div>
     <div class="row mt">
-      <div class="unit grow"><input class="input" id="bw-input" inputmode="decimal" placeholder="${b ? b.weight : '170.0'}" value="${b ? b.weight : ''}"><span>lb</span></div>
+      <div class="unit grow"><input class="input" id="bw-input" inputmode="decimal" placeholder="${b ? b.weight : lastBw ? lastBw.weight : 'lb'}" value="${b ? b.weight : ''}"><span>lb</span></div>
       <button class="btn square" data-action="save-bw">✓</button>
       ${b ? `<button class="btn neutral square" data-action="delete-bw" data-id="${b.id}">🗑</button>` : ''}
     </div>
@@ -617,6 +646,152 @@ async function saveBodyweight() {
   toast(`Saved ${w} lb ✓`);
   await RENDER.home();
   pop($('#bw-card'));
+}
+
+/* ==============================================================
+   WATER + SUPPLEMENTS (shared cards: Home and Food)
+   ============================================================== */
+function waterCard(water, date) {
+  const total = sum(water, 'oz');
+  const rows = water.slice().sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  return `<div class="card" id="water-card">
+    <div class="row between"><h2>Water 💧</h2><span class="pill ${total >= S.waterGoal ? 'ok' : ''}">${fmtNum(total)} / ${S.waterGoal} oz</span></div>
+    <div class="bar"><i style="width:${Math.min(100, total / S.waterGoal * 100)}%;background:var(--blue)"></i></div>
+    <div class="row mt">
+      <button class="btn blue sm" data-action="water" data-oz="8" data-date="${date}">+8</button>
+      <button class="btn blue sm" data-action="water" data-oz="16" data-date="${date}">+16</button>
+      <button class="btn blue sm" data-action="water" data-oz="24" data-date="${date}">+24</button>
+      <button class="btn neutral sm" data-action="water" data-oz="-8" data-date="${date}">−8</button>
+    </div>
+    ${rows.length ? `<details><summary>Log (${rows.length})</summary>
+      ${rows.map((w) => `<div class="entry"><span class="t">${fmtClock(w.time)}</span><span class="n">${w.oz > 0 ? '+' : ''}${w.oz} oz</span><button class="x" data-action="del" data-store="water" data-id="${w.id}">×</button></div>`).join('')}
+    </details>` : ''}
+  </div>`;
+}
+function suppCard(entries) {
+  if (!S.supplements.length) return '';
+  let html = `<div class="card" id="supp-card"><h2>Supplements 💊</h2>`;
+  for (const s of S.supplements) {
+    const mine = entries.filter((e) => e.supplementId === s.id).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+    const total = sum(mine, 'amount');
+    html += `<div class="supp-row">
+      <button class="btn purple sm grow" data-action="supp-take" data-id="${s.id}">${esc(s.name)} ${mine.length ? '✓' : ''}</button>
+      <div class="unit"><input class="input sm supp-amt" inputmode="decimal" data-id="${s.id}" value="${s.amount}"><span>${esc(s.unit)}</span></div>
+    </div>
+    ${mine.length ? `<div class="tagrow">${mine.map((e) => `<span class="tag">${fmtClock(e.time)} · ${e.amount} ${esc(e.unit)}<button data-action="del" data-store="supplements" data-id="${e.id}">×</button></span>`).join('')}
+      <span class="tag" style="background:transparent">= ${fmtNum(total)} ${esc(s.unit)} today</span></div>` : ''}`;
+  }
+  return html + `</div>`;
+}
+async function logWater(oz, date) {
+  const rows = await DB.byIndex('water', 'date', date);
+  const total = sum(rows, 'oz');
+  if (oz < 0) { if (total <= 0) { toast('Nothing to take away'); return; } oz = Math.max(oz, -total); }
+  await DB.put('water', { id: uid(), date, time: date === todayStr() ? timeStr() : '12:00', oz });
+  await rerender(); pop($('#water-card'));
+  toast(`${oz > 0 ? '+' : ''}${oz} oz → ${fmtNum(total + oz)} oz today`);
+}
+async function takeSupp(id) {
+  const s = S.supplements.find((x) => x.id === id); if (!s) return;
+  const input = $(`.supp-amt[data-id="${id}"]`);
+  const amount = input && num(input.value) != null ? num(input.value) : s.amount;
+  const entry = { id: uid(), date: todayStr(), time: timeStr(), supplementId: id, amount, unit: s.unit };
+  await DB.put('supplements', entry);
+  await rerender(); pop($('#supp-card'));
+  toast(`${s.name} ${amount} ${s.unit} ✓`, { action: 'Undo', onAction: async () => { await DB.delete('supplements', entry.id); rerender(); } });
+}
+const rerender = () => (RENDER[current] ? RENDER[current]() : Promise.resolve());
+
+/* ==============================================================
+   FOOD
+   ============================================================== */
+const F = { date: todayStr() };
+RENDER.food = async function renderFood() {
+  const date = F.date, isToday = date === todayStr();
+  const [food, water, supps, all] = await Promise.all([
+    DB.byIndex('food', 'date', date), DB.byIndex('water', 'date', date), DB.byIndex('supplements', 'date', date), DB.getAll('food'),
+  ]);
+  food.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  const cal = sum(food, 'calories'), pro = sum(food, 'protein'), oz = sum(water, 'oz');
+  const left = S.calorieGoal - cal;
+
+  // Recent foods: most-used names in the last 60 days, for one-tap re-logging.
+  const cutoff = addDays(todayStr(), -60); const seen = {};
+  for (const f of all) {
+    if (f.date < cutoff || !f.name) continue;
+    const k = f.name.trim().toLowerCase();
+    const r = seen[k] || (seen[k] = { name: f.name.trim(), n: 0, last: '' });
+    r.n++; if ((f.date + (f.time || '')) > r.last) { r.last = f.date + (f.time || ''); r.calories = f.calories; r.protein = f.protein; }
+  }
+  const recent = Object.values(seen).sort((a, b) => b.n - a.n || (a.last < b.last ? 1 : -1)).slice(0, 8);
+
+  const label = isToday ? 'Today' : date === addDays(todayStr(), -1) ? 'Yesterday' : fmtDate(date);
+  let html = `<div class="daynav">
+    <button class="btn neutral icon" data-action="food-day" data-n="-1">‹</button>
+    <h1>${label} 🍗</h1>
+    <button class="btn neutral icon" data-action="food-day" data-n="1" ${isToday ? 'disabled' : ''}>›</button>
+  </div>`;
+
+  html += `<div class="card">
+    <div class="row between"><h2>${fmtNum(cal)} <span class="muted small">/ ${fmtNum(S.calorieGoal)} cal</span></h2>
+      <span class="pill ${left < 0 ? 'bad' : ''}">${left >= 0 ? fmtNum(left) + ' left' : fmtNum(-left) + ' over'}</span></div>
+    <div class="bar ${left < 0 ? 'over' : ''}"><i style="width:${Math.min(100, cal / S.calorieGoal * 100)}%"></i></div>
+    <div class="row between mt"><b>${fmtNum(pro)} g <span class="muted small">/ ${S.proteinGoal} g protein</span></b>
+      <span class="pill ${pro >= S.proteinGoal ? 'ok' : ''}">${pro >= S.proteinGoal ? 'Protein hit ✓' : fmtNum(S.proteinGoal - pro) + ' g to go'}</span></div>
+    <div class="bar"><i style="width:${Math.min(100, pro / S.proteinGoal * 100)}%;background:var(--purple)"></i></div>
+  </div>`;
+
+  html += `<div class="card" id="food-add">
+    <h2>Log food</h2>
+    <div class="field"><input class="input" id="f-food-name" placeholder="What did you eat?" autocomplete="off"></div>
+    <div class="row">
+      <div class="unit grow"><input class="input" id="f-food-cal" inputmode="numeric" placeholder="650"><span>cal</span></div>
+      <div class="unit grow"><input class="input" id="f-food-pro" inputmode="numeric" placeholder="optional"><span>g protein</span></div>
+    </div>
+    <button class="btn mt" data-action="food-add" data-date="${date}">Add</button>
+    ${recent.length ? `<div class="chips">${recent.map((r) => `<button class="chip" data-action="food-chip" data-name="${esc(r.name)}" data-cal="${r.calories ?? ''}" data-pro="${r.protein ?? ''}">${esc(r.name)} · ${fmtNum(r.calories || 0)}</button>`).join('')}</div>` : ''}
+  </div>`;
+
+  html += `<div class="card"><h2>${label}'s log</h2>${food.length ? `<div class="mt">${food.map((f) => `
+    <div class="entry" data-action="food-edit" data-id="${f.id}">
+      <span class="t">${fmtClock(f.time)}</span><span class="n">${esc(f.name)}</span>
+      ${f.protein != null ? `<span class="p">${f.protein}g</span>` : ''}<span class="c">${fmtNum(f.calories)}</span>
+    </div>`).join('')}</div>` : '<p class="muted small">Nothing logged yet.</p>'}</div>`;
+
+  html += waterCard(water, date);
+
+  const suppLine = S.supplements.map((s) => { const m = supps.filter((e) => e.supplementId === s.id); return m.length ? `${s.name} ${fmtNum(sum(m, 'amount'))} ${s.unit}` : null; }).filter(Boolean).join(' · ');
+  html += `<div class="card">
+    <h2>Day summary 📋</h2>
+    <p class="mt"><b>${fmtNum(cal)} cal</b> — ${left >= 0 ? `${fmtNum(left)} under goal` : `${fmtNum(-left)} over goal`} · <b>${fmtNum(pro)} g</b> protein ${pro >= S.proteinGoal ? '✓' : `(${fmtNum(S.proteinGoal - pro)} g short)`}</p>
+    <p><b>${fmtNum(oz)} oz</b> water ${oz >= S.waterGoal ? '✓' : `(${fmtNum(S.waterGoal - oz)} oz short)`}${suppLine ? ` · ${suppLine}` : ''}</p>
+    <p class="muted small">${food.length} food${food.length === 1 ? '' : 's'} logged${food.length ? ` · biggest: ${esc(food.slice().sort((a, b) => b.calories - a.calories)[0].name)}` : ''}</p>
+  </div>`;
+
+  $('#scr-food').innerHTML = html;
+};
+async function addFood(date) {
+  const name = $('#f-food-name').value.trim(), cal = num($('#f-food-cal').value), pro = num($('#f-food-pro').value);
+  if (!name) { toast('What did you eat?'); $('#f-food-name').focus(); return; }
+  if (cal == null) { toast('How many calories?'); $('#f-food-cal').focus(); return; }
+  await DB.put('food', { id: uid(), date, time: date === todayStr() ? timeStr() : '12:00', name, calories: Math.round(cal), protein: pro == null ? null : Math.round(pro) });
+  await RENDER.food(); pop($('#food-add'));
+  toast(`Logged ${name} · ${fmtNum(cal)} cal ✓`);
+}
+async function foodSheet(id) {
+  const f = await DB.get('food', id); if (!f) return;
+  openSheet(`<h2>Edit food</h2>
+    <div class="field"><label>Name</label><input class="input" id="e-name" value="${esc(f.name)}"></div>
+    <div class="row">
+      <div class="field grow"><label>Calories</label><input class="input" id="e-cal" inputmode="numeric" value="${f.calories}"></div>
+      <div class="field grow"><label>Protein g</label><input class="input" id="e-pro" inputmode="numeric" value="${f.protein ?? ''}"></div>
+    </div>
+    <div class="field"><label>Time</label><input class="input" id="e-time" type="time" value="${f.time || ''}"></div>
+    <div class="sheet-actions">
+      <button class="btn" data-action="food-save" data-id="${f.id}">Save</button>
+      <button class="btn red" data-action="food-delete" data-id="${f.id}">Delete</button>
+      <button class="btn ghost" data-action="sheet-close">Cancel</button>
+    </div>`);
 }
 
 /* ==============================================================
@@ -860,6 +1035,14 @@ RENDER.setup = async function renderSetup() {
     <p class="muted tiny">Each exercise has its own rest time (edit it on the exercise). The timer beeps and flashes only while the app is open — iOS won't alert from a locked screen.</p>
   </div>`;
 
+  html += `<div class="card">
+    <h2>Supplements 💊</h2>
+    <div class="mt">${S.supplements.length ? S.supplements.map((s) => `
+      <div class="exrow"><div class="grow"><div class="name">${esc(s.name)}</div><div class="meta">default ${s.amount} ${esc(s.unit)} per tap</div></div>
+      <button class="btn blue xs auto" data-action="edit-supp" data-id="${s.id}">Edit</button></div>`).join('') : '<p class="muted small">No supplements — the Home card is hidden.</p>'}</div>
+    <button class="btn ghost sm mt" data-action="add-supp">+ Add supplement</button>
+  </div>`;
+
   html += `<h2 class="mt">Workout days</h2>`;
   if (!S.days.length) html += `<div class="card stack"><p class="muted">No days yet.</p><button class="btn" data-action="load-ppl">Load PPL template</button></div>`;
   for (const d of S.days) {
@@ -927,6 +1110,24 @@ async function saveExFromSheet(id) {
   await DB.put('exercises', ex);
   closeSheet(); toast(`Saved ${name} ✓`);
   await RENDER.setup();
+}
+function suppSheet(s) {
+  const isNew = !s;
+  s = s || { name: '', amount: 1, unit: 'mg' };
+  const chip = (u) => `<button class="chip ${s.unit === u ? 'on' : ''}" data-action="unit-chip" data-unit="${u}">${u}</button>`;
+  openSheet(`<h2>${isNew ? 'New supplement' : 'Edit supplement'}</h2>
+    <div class="field"><label>Name</label><input class="input" id="f-supp-name" value="${esc(s.name)}" placeholder="Creatine"></div>
+    <div class="row">
+      <div class="field grow"><label>Default amount</label><input class="input" id="f-supp-amt" inputmode="decimal" value="${s.amount}"></div>
+      <div class="field grow"><label>Unit</label><input class="input" id="f-supp-unit" value="${esc(s.unit)}"></div>
+    </div>
+    <div class="chips">${['mg', 'g', 'ml', 'pill', 'scoop'].map(chip).join('')}</div>
+    <div class="sheet-actions">
+      <button class="btn" data-action="sheet-save-supp" data-id="${isNew ? '' : s.id}">Save</button>
+      ${isNew ? '' : `<button class="btn red" data-action="sheet-delete-supp" data-id="${s.id}">Remove</button>`}
+      <button class="btn ghost" data-action="sheet-close">Cancel</button>
+    </div>`);
+  setTimeout(() => isNew && $('#f-supp-name').focus(), 50);
 }
 function daySheet(day) {
   const isNew = !day;
@@ -1204,6 +1405,37 @@ const ACTIONS = {
   'sheet-close': closeSheet,
   export: exportBackup,
   import: importBackup,
+  // food / water / supplements
+  water: (el) => logWater(Number(el.dataset.oz), el.dataset.date),
+  'supp-take': (el) => takeSupp(el.dataset.id),
+  del: async (el) => { await DB.delete(el.dataset.store, el.dataset.id); toast('Removed'); rerender(); },
+  'food-day': (el) => { F.date = addDays(F.date, Number(el.dataset.n)); if (F.date > todayStr()) F.date = todayStr(); RENDER.food(); },
+  'food-add': (el) => addFood(el.dataset.date),
+  'food-chip': (el) => { $('#f-food-name').value = el.dataset.name; $('#f-food-cal').value = el.dataset.cal; $('#f-food-pro').value = el.dataset.pro; $('#f-food-cal').focus(); },
+  'food-edit': (el) => foodSheet(el.dataset.id),
+  'food-save': async (el) => {
+    const f = await DB.get('food', el.dataset.id); if (!f) return;
+    const name = $('#e-name').value.trim(), cal = num($('#e-cal').value), pro = num($('#e-pro').value);
+    if (!name || cal == null) { toast('Name and calories are required'); return; }
+    Object.assign(f, { name, calories: Math.round(cal), protein: pro == null ? null : Math.round(pro), time: $('#e-time').value || f.time });
+    await DB.put('food', f); closeSheet(); toast('Saved ✓'); rerender();
+  },
+  'food-delete': async (el) => { await DB.delete('food', el.dataset.id); closeSheet(); toast('Deleted'); rerender(); },
+  'add-supp': () => suppSheet(null),
+  'edit-supp': (el) => suppSheet(S.supplements.find((s) => s.id === el.dataset.id)),
+  'unit-chip': (el) => { $('#f-supp-unit').value = el.dataset.unit; $$('.chip').forEach((c) => c.classList.toggle('on', c === el)); },
+  'sheet-save-supp': async (el) => {
+    const name = $('#f-supp-name').value.trim(), amount = num($('#f-supp-amt').value), unit = $('#f-supp-unit').value.trim() || 'mg';
+    if (!name) { toast('Give it a name'); return; }
+    let s = S.supplements.find((x) => x.id === el.dataset.id);
+    if (s) Object.assign(s, { name, amount: amount ?? s.amount, unit });
+    else S.supplements.push({ id: uid(), name, amount: amount ?? 1, unit });
+    await saveS('supplements'); closeSheet(); toast('Saved ✓'); RENDER.setup();
+  },
+  'sheet-delete-supp': async (el) => {
+    S.supplements = S.supplements.filter((s) => s.id !== el.dataset.id);
+    await saveS('supplements'); closeSheet(); toast('Removed (past entries are kept)'); RENDER.setup();
+  },
   'confirm-yes': () => { const r = confirmResolve; confirmResolve = null; closeSheet(); r && r(true); },
   'confirm-no':  () => { const r = confirmResolve; confirmResolve = null; closeSheet(); r && r(false); },
   update: async (el) => {
@@ -1236,6 +1468,8 @@ document.addEventListener('keydown', (e) => {
   const t = e.target;
   if (t.classList && t.classList.contains('set-input')) { e.preventDefault(); ACTIONS['log-set']({ dataset: { ex: t.dataset.ex, set: t.dataset.set } }); }
   else if (t.id === 'bw-input') { e.preventDefault(); saveBodyweight(); }
+  else if (t.id === 'f-food-name') { e.preventDefault(); $('#f-food-cal').focus(); }
+  else if (t.id === 'f-food-cal' || t.id === 'f-food-pro') { e.preventDefault(); addFood(F.date); }
 });
 
 /* ---------- boot ---------- */

@@ -1,6 +1,6 @@
 // Rep Plate service worker — caches the app shell so it opens offline.
 // Bump CACHE_VERSION on EVERY release, or iPhones keep serving the old files.
-const CACHE_VERSION = 'repplate-v0.2.1';
+const CACHE_VERSION = 'repplate-v0.3.0';
 
 const APP_SHELL = [
   './',
